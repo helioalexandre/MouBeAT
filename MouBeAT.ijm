@@ -20,11 +20,13 @@ requires("1.50a");
  //var solidity = call("ij.Prefs.get", "MouBeAT_Prefs.cube.soli", "0");
  var wCube = call("ij.Prefs.get", "MouBeAT_Prefs.cube.width", "0");
  var mCubeArea = call("ij.Prefs.get", "MouBeAT_Prefs.cube.marea","0");
+ var headCubeFraction = call("ij.Prefs.get", "MouBeAT_Prefs.cube.headFraction", "0");
  //Elevated maze
  var wElevated = call("ij.Prefs.get", "MouBeAT_Prefs.elev.width", "0");
  var lElevated = call("ij.Prefs.get", "MouBeAT_Prefs.elev.length", "0");
  var mElevatedArea = call("ij.Prefs.get", "MouBeAT_Prefs.elev.marea", "0");
  var sElevated = call("ij.Prefs.get", "MouBeAT_Prefs.elev.smooth", "0");
+ var headElevatedFraction = call("ij.Prefs.get", "MouBeAT_Prefs.elev.headFraction", "0");
  //Swimming maze
  var dSwimming = call("ij.Prefs.get", "MouBeAT_Prefs.swim.dia", "0");
  var mSwimmingArea = call("ij.Prefs.get", "MouBeAT_Prefs.swim.marea", "0");
@@ -33,6 +35,7 @@ requires("1.50a");
  var wTY = call("ij.Prefs.get", "MouBeAT_Prefs.ty.width", "0");
  var mTYArea = call("ij.Prefs.get", "MouBeAT_Prefs.ty.marea", "0");
  var sTY = call("ij.Prefs.get", "MouBeAT_Prefs.ty.smooth", "0");
+ var headTYFraction = call("ij.Prefs.get", "MouBeAT_Prefs.ty.headFraction", "0");
  //Freezing test
  //var mFreezeArea = call("ij.Prefs.get", "MouBeAT_Prefs.fre.marea", "0");
  //var sFreeze = call("ij.Prefs.get", "MouBeAT_Prefs.fre.smooth", "0");
@@ -678,6 +681,8 @@ function getDirection(dir, imTitle, time, headAngle, fps, i, pposition){
 		
 		/*Fill in if the rat is in the center or in the outer regions
 		or at the borders*/
+		hfraction = 1-headCubeFraction;
+		ihfraction = headCubeFraction;
 		/*if(pposition == 3){
 			if(in >= (lengthOf(xp)*0.8) && count)
 				angle[2] = 1;
@@ -687,14 +692,14 @@ function getDirection(dir, imTitle, time, headAngle, fps, i, pposition){
 				angle[2] = 3;
 		}else*/ 
 		if(pposition == 1){
-			if(in >= (lengthOf(xp)*0.3) && count)
+			if(in >= (lengthOf(xp)*ihfraction) && count)
 				angle[2] = 1;
 			else /*if(out >= (lengthOf(xp)*0.8))*/
 				angle[2] = 2;
 			/*else
 				angle[2] = 3;*/
 		}else if(pposition == 2){
-			if(in >= (lengthOf(xp)*0.7) && count)
+			if(in >= (lengthOf(xp)*hfraction) && count)
 				angle[2] = 1;
 			else /*if(out >= (lengthOf(xp)*0.2))*/	
 				angle[2] = 2;
@@ -1137,25 +1142,27 @@ function getDirectionET(armsL, openDir, previousPosition,fps, tPos, headAngle){
 
 
 	//setup the result to tell where the mouse is...
+	bodyArea = 1 - headElevatedFraction;
+	halfBodyArea = bodyArea/2;
 	if(flag){
 		if(previousPosition == 0 ){
-			if(flag && countClose >= lengthOf(xp)*0.8)
+			if(flag && countClose >= lengthOf(xp)*bodyArea)
 				angle[0] = 1;
-			else if(flag && countOpen >= lengthOf(xp)*0.8)
+			else if(flag && countOpen >= lengthOf(xp)*bodyArea)
 				angle[0] = 2;
 			else if(flag)
 				angle[0] = 0;
 		}else if(previousPosition == 1 ){
-			if(flag && countClose >= lengthOf(xp)*0.4)
+			if(flag && countClose >= lengthOf(xp)*halfBodyArea)
 				angle[0] = 1;
-			else if(flag && countOpen >= lengthOf(xp)*0.8)
+			else if(flag && countOpen >= lengthOf(xp)*bodyArea)
 				angle[0] = 2;
 			else if(flag)
 				angle[0] = 0;
 		}else if(previousPosition == 2 ){
-			if(flag && countClose >= lengthOf(xp)*0.8)
+			if(flag && countClose >= lengthOf(xp)*bodyArea)
 				angle[0] = 1;
-			else if(flag && countOpen >= lengthOf(xp)*0.4)
+			else if(flag && countOpen >= lengthOf(xp)*halfBodyArea)
 				angle[0] = 2;
 			else if(flag)
 				angle[0] = 0;
@@ -2511,40 +2518,41 @@ function getDirectionTY(pposition){
 			else ;
 		}
 		
-		
+		headArea = 1 - headTYFraction;
+		halfheadArea = headArea/2;
 		if(pposition==0){
-			if(center >= lengthOf(xp)*0.9)
+			if(center >= lengthOf(xp)*headArea)
 				angle = 1;
-			else if(left >= lengthOf(xp)*0.9)
+			else if(left >= lengthOf(xp)*headArea)
 				angle = 2;
-			else if(rigth >= lengthOf(xp)*0.9)
+			else if(rigth >= lengthOf(xp)*headArea)
 				angle = 3;
 			else
 				angle = 0;	
 		}else if(pposition==1){
-			if(center >= lengthOf(xp)*0.4)
+			if(center >= lengthOf(xp)*halfheadArea)
 				angle = 1;
-			else if(left >= lengthOf(xp)*0.9)
+			else if(left >= lengthOf(xp)*headArea)
 				angle = 2;
-			else if(rigth >= lengthOf(xp)*0.9)
+			else if(rigth >= lengthOf(xp)*headArea)
 				angle = 3;
 			else
 				angle = 0;	
 		}else if(pposition==2){
-			if(center >= lengthOf(xp)*0.9)
+			if(center >= lengthOf(xp)*headArea)
 				angle = 1;
-			else if(left >= lengthOf(xp)*0.4)
+			else if(left >= lengthOf(xp)*halfheadArea)
 				angle = 2;
-			else if(rigth >= lengthOf(xp)*0.9)
+			else if(rigth >= lengthOf(xp)*headArea)
 				angle = 3;
 			else
 				angle = 0;	
 		}else if(pposition==3){
-			if(center >= lengthOf(xp)*0.9)
+			if(center >= lengthOf(xp)*headArea)
 				angle = 1;
-			else if(left >= lengthOf(xp)*0.9)
+			else if(left >= lengthOf(xp)*headArea)
 				angle = 2;
-			else if(rigth >= lengthOf(xp)*0.4)
+			else if(rigth >= lengthOf(xp)*halfheadArea)
 				angle = 3;
 			else
 				angle = 0;	
@@ -2803,12 +2811,14 @@ function Preferences(){
 	//Dialog.addNumber("Rearing - Solidity (OF only)", solidity);
 	Dialog.addNumber("Default width of box (units)", wCube);
 	Dialog.addNumber("Mouse minimal area (pixels)", mCubeArea);
+	Dialog.addNumber("Head fraction of body (recommended from 0.10 to 0.35)", headCubeFraction);
 	//Elevated maze
 	Dialog.addMessage("Elevated Plus maze Preferences");
 	Dialog.addNumber("Arms width (units)", wElevated);
 	Dialog.addNumber("Length of arms (units)", lElevated);
 	Dialog.addNumber("Mouse minimal area (pixels)", mElevatedArea);
 	Dialog.addNumber("Selection smoothing value (pixels)", sElevated);
+	Dialog.addNumber("Head fraction of body (recommended from 0.10 to 0.35)", headElevatedFraction);
 	//Swimming maze
 	Dialog.addMessage("Morris Water maze Preferences");
 	Dialog.addNumber("Pool diameter (units)", dSwimming);
@@ -2819,6 +2829,7 @@ function Preferences(){
 	Dialog.addNumber("Arms width (units)", wTY);
 	Dialog.addNumber("Mouse minimal area (pixels)", mTYArea);
 	Dialog.addNumber("Selection smoothing value (pixels)", sTY);
+	Dialog.addNumber("Head fraction of body (recommended from 0.10 to 0.35)", headTYFraction);
 	//Freeze test
 	//Dialog.addMessage("Fear Conditioning Parameters");
 	//Dialog.addNumber("Minimal area difference between frames (pixels)", mFreezeArea);
@@ -2837,11 +2848,13 @@ function Preferences(){
 	//solidityL = Dialog.getNumber();
 	wCubeL = Dialog.getNumber();
 	mCubeAreaL = Dialog.getNumber();
+	headCubeFractionL = Dialog.getNumber();
 	//Elevated maze
 	wElevatedL = Dialog.getNumber();
 	lElevatedL = Dialog.getNumber();
 	mElevatedAreaL = Dialog.getNumber();
 	sElevatedL = Dialog.getNumber();
+	headElevatedFractionL = Dialog.getNumber();
 	//Swimming maze
 	dSwimmingL = Dialog.getNumber();
 	mSwimmingAreaL = Dialog.getNumber();
@@ -2850,6 +2863,7 @@ function Preferences(){
 	wTYL = Dialog.getNumber();
 	mTYAreaL = Dialog.getNumber();
 	sTYL = Dialog.getNumber();
+	headTYFractionL = Dialog.getNumber();
 	//Freeze test
 	//mFreezeAreaL = Dialog.getNumber();
 	//sFreezeL = Dialog.getNumber();
@@ -2866,11 +2880,13 @@ function Preferences(){
 		//call("ij.Prefs.set", "MouBeAT_Prefs.cube.soli", solidityL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.cube.width", wCubeL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.cube.marea", mCubeAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.headFraction", headCubeFractionL);
 		//Elevated maze
 		call("ij.Prefs.set", "MouBeAT_Prefs.elev.width", wElevatedL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.elev.length", lElevatedL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.elev.marea", mElevatedAreaL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.elev.smooth", sElevatedL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", headElevatedFractionL);
 		//Swimming maze
 		call("ij.Prefs.set", "MouBeAT_Prefs.swim.dia", dSwimmingL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.swim.marea", mSwimmingAreaL);
@@ -2879,6 +2895,7 @@ function Preferences(){
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.width", wTYL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.marea", mTYAreaL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.smooth", sTYL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", headTYFractionL);
 		//Freeze maze
 		//call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", mFreezeAreaL);
 		//call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", sFreezeL);
@@ -2892,11 +2909,13 @@ function Preferences(){
 		//call("ij.Prefs.set", "MouBeAT_Prefs.cube.soli", 0.8);
 		call("ij.Prefs.set", "MouBeAT_Prefs.cube.width", 38);
 		call("ij.Prefs.set", "MouBeAT_Prefs.cube.marea", 500);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.headFraction", 0.3);
 		//Elevated maze
 		call("ij.Prefs.set", "MouBeAT_Prefs.elev.width", 7);
 		call("ij.Prefs.set", "MouBeAT_Prefs.elev.length", 25);
 		call("ij.Prefs.set", "MouBeAT_Prefs.elev.marea", 1000);
 		call("ij.Prefs.set", "MouBeAT_Prefs.elev.smooth", 3);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", 0.2);
 		//Swimming maze
 		call("ij.Prefs.set", "MouBeAT_Prefs.swim.dia", 125);
 		call("ij.Prefs.set", "MouBeAT_Prefs.swim.marea", 50);
@@ -2905,6 +2924,7 @@ function Preferences(){
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.width", 7);
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.marea", 500);
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.smooth", 3);
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.headFraction", 0.1);
 		//Freeze maze
 		//call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", 500);
 		//call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", 10);
@@ -4345,9 +4365,9 @@ function writePreferences(file){
 	print(file, "Mouse minimal area (pixels)\t"+ mTYArea);
 	print(file, "Selection smoothing value (pixels)\t"+ sTY);
 	//Fear Conditioning
-	print(file, "Mouse minimal area (pixels)\t"+ mFreezeArea);
+	/*print(file, "Mouse minimal area (pixels)\t"+ mFreezeArea);
 	print(file, "Selection smoothing value (pixels)\t"+ sFreeze);
-	print(file, "Bin intervals (seconds)\t"+ tFreeze);
+	print(file, "Bin intervals (seconds)\t"+ tFreeze);*/
 	
 }
 
@@ -4474,7 +4494,7 @@ function checkPreferences(array){
 		flag = false;
 	}
 	//Fear Conditioning
-	i = i + 2;
+	/*i = i + 2;
 	
 	if( mFreezeArea!=array[i+1]){
 		print(array[i] + ": current is "+  mFreezeArea + ". Saved is: " + array[i+1]);
@@ -4494,7 +4514,7 @@ function checkPreferences(array){
 		print(array[i] + ": current is "+  tFreeze + ". Saved is: " + array[i+1]);
 		print("DIFFERENT!!Consider changing settings for reanalysis of Fear Conditioning.");
 		flag = false;
-	}	
+	}	*/
 		
 	if(flag)
 		print("All good, no differences found...");	
