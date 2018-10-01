@@ -8,7 +8,7 @@
  * To install the toolbox please download the MouBeAT.ijm file and copy it into the ImageJ/FIJI macro/toolset folder.
  * To use the conversion tools of the tool, either install FFMPEG in order to have it in the system path or download the ffmpeg.exe file and copy it into the folder mentioned in the previous bullet point.
  
- MouBeAT has now been publishe. If you use it in your paper please cite:
+ MouBeAT has now been published. If you use it in your paper please cite:
  
 If you use MouBeAT in a publication please cite the following paper:
 Bello-Arroyo E, Roque H, Marcos A, Orihuel J, Higuera-Matas A, Desco M,
