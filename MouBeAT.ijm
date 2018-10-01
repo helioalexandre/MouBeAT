@@ -1,6 +1,6 @@
 /*
 Toolbox for mouse behavioural analysis of several maze types:
-Open Field; Elevated Plus Maze; Morris Water Maze; Novel Object Recognition (included but not tested); Y Maze; Fear Conditioning
+Open Field; Elevated Plus Maze; Morris Water Maze; Novel Object Recognition (included but not tested); Y Maze; Fear Conditioning (included but not tested)
  * Author - Helio Roque - Centro Nacional Investigaciones CardioVasculares, Madrid, Spain
  * Contact - helio.alexandreduarte at cnic.es
  *  
@@ -37,9 +37,9 @@ requires("1.50a");
  var sTY = call("ij.Prefs.get", "MouBeAT_Prefs.ty.smooth", "0");
  var headTYFraction = call("ij.Prefs.get", "MouBeAT_Prefs.ty.headFraction", "0");
  //Freezing test
- //var mFreezeArea = call("ij.Prefs.get", "MouBeAT_Prefs.fre.marea", "0");
- //var sFreeze = call("ij.Prefs.get", "MouBeAT_Prefs.fre.smooth", "0");
- //var tFreeze = call("ij.Prefs.get", "MouBeAT_Prefs.fre.binInt", "0");
+ var mFreezeArea = call("ij.Prefs.get", "MouBeAT_Prefs.fre.marea", "0");
+ var sFreeze = call("ij.Prefs.get", "MouBeAT_Prefs.fre.smooth", "0");
+ var tFreeze = call("ij.Prefs.get", "MouBeAT_Prefs.fre.binInt", "0");
  
  
 macro "Mouse Behavioral Analysis Menu Tool - C000C111D98C111D88C111D89C111D86D99C111D87C111D85C111D8aD97C111D9aC222D79D8bC222D7aC222D96C222D84C222D78C222D7bC222D76D9bC222D95C222D77C333Da9C333D75C333D74C333D73Da8C333DaaC333D8cC333C444D83C444D7cDa7C444D6aC444D69C444D94C444C555D9cC555DabC555Da6C555D68C555D6bC555D66C555D72C555C666D67C666D65C666D64D7dDa5Db9C666D63C666D8dDb8C666DbaC666D82D93C666DacC666C777D6cC777D7eC777Da4Db7C777D9dDbbC777D59D7fC777D5aD62D6dDb6C777D6fC777D8eC777C888D6eD92DbcC888Da3DadDcaC888D57D58Db5Dc9C888D56Dc7C888D5bD8fDc8C888D9eDc6DcbC888D9fDaeDb4DbdDc5C888D53D55D71D91DccC888D81Da1Da2Dc1Dd8C888D54D5cDafDb1Db2Db3Dc0Dc2Dd0Dd1Dd6DdaDdbDdfDe0De8De9DeaC888D52D5fDc3Dd2Dd5Dd7Dd9C888D5dD90Da0Db0DbeDc4Dd3DdcDdeDefDf2C888D5eDbfDcdDcfDd4De1DebDfaC888D4aD61DddDe2Df0Df1Df5Df8C999D80DceDe3DeeDf3Df4Df9DfbDfdDfeC999D41D47D49De7DecDedDf6Df7DfcDffC999D40D42D46D4bD4cD4dD51De4C999D43D44D48D4eD4fD50D70De5De6C999D10D20D30D31D36D3cD45D60C999D17D32D3bD3fC999D21D22D26D2eD2fD34D37D39D3aD3dD3eC999D15D16D23D29D33C999D07D11D12D14D18D19D1eD1fD25D27D2aD2dD35D38C999D00D05D06D0fD1aD24D2bD2cC999D01D04D09D0cD13D1bD1cD1dD28C999D02D0aD0bD0eC999D08D0dC999D03"{
@@ -55,11 +55,11 @@ macro "Mouse Behavioral Analysis Menu Tool - C000C111D98C111D88C111D89C111D86D99
 	 		else if(choice == "Open Field") {MouseCubeTracker(); }
 	 		else if(choice == "Elevated Plus Maze") {MiceElevatedPuzzleTracker(); }
 	 		else if(choice == "Morris Water Maze") {MouseSwimTracker(); }
-	 		//else if(choice == "Novel Object Recognition") {MouseRegionsTracker(); }
+	 		else if(choice == "Novel Object Recognition") {MouseRegionsTracker(); }
 	 		else if(choice == "Y Maze") {MiceYTTracker(); }
 	 		else if(choice == "Open Previous Analysis File") {openPreviousAnalysis(); }
 	 		else if(choice == "Preferences") {Preferences(); }
-	 		//else if(choice == "Fear Conditioning"){fearConditioning();}
+	 		else if(choice == "Fear Conditioning"){fearConditioning();}
 	 	}
  	}
  		
@@ -2568,7 +2568,7 @@ function getDirectionTY(pposition){
  Function for Fear Conditioning analysis. Its main job its to determine
   if the mouse freezes or not
  */
- /*
+ 
 function fearConditioning(){
 
 	checkAndSort();
@@ -2592,7 +2592,7 @@ function fearConditioning(){
 	
 	/* Takes care of cases where an analysis file exists already
 	asks if you want to delete it or not */
-	/*
+	
 	if(File.exists(dir + imTitle + ".free.trac")){
 		showMessageWithCancel(delFile);
 		File.delete(dir + imTitle + ".free.trac");		
@@ -2601,7 +2601,7 @@ function fearConditioning(){
 	/*Create a new Analysis file. It is very important not to change the order that
 	instructions get writen to this file as that will screw up the function
 	to redo previous analysis*/
-	/*
+	
 	f = File.open(dir + imTitle + ".free.trac");
 	print(f, dir + "\t" + getWidth() + "\t" +  getHeight() + "\t" + nSlices() +"\t"+ gaus);
 	print(f, imTitle);
@@ -2637,7 +2637,7 @@ function fearConditioning(){
 		roiManager("Reset");
 	}else{*/
 	//Changes the backgrnd color to match black or white mice
-	/*	
+	
 	if(!blaWhi)
 		setBackgroundColor(255, 255, 255);
 	else
@@ -2654,7 +2654,7 @@ function fearConditioning(){
 		
 	/*Set autothreshold method with Minum and get the input from the user
 	regarding it. Also save the threshold to file*/
-	/*
+	
 	setSlice(round(nSlices/2));
 	setAutoThreshold("Minimum");  
 	call("ij.plugin.frame.ThresholdAdjuster.setMethod","Minimum");
@@ -2664,7 +2664,7 @@ function fearConditioning(){
 	
 	/*If remove dark regions was selected save the parameters to file
 	This is here to maintain the order of the file to enable previous analysis to function*/
-	/*
+	
 	if(darkR)
 		print(f, "DarkR\t" + darkA[0] +"\t"+ darkA[1]);
 	else 
@@ -2702,7 +2702,7 @@ function fearConditioning(){
 /*This function goes through the ROIs, creates and fills arrays with the
 result of the ROI analysis and then prints them to 2 files with the individual
 results and a summary of the results*/
-/*
+
 function freezeCheck(fps, dir, imTitle, sStart){
 	//Determine the delay between ROIs
 	delay = 1/fps;
@@ -2732,7 +2732,7 @@ function freezeCheck(fps, dir, imTitle, sStart){
 		}else{
 			/*If freeze frames are more then half second then print to results start and ending frames
 			of freeze section*/
-			/*
+			
 			if(count >= fps*2){
 				for(k = 0; k < count; k++){
 					n = nResults;
@@ -2795,7 +2795,7 @@ function freezeCheck(fps, dir, imTitle, sStart){
 
 
 }
-*/
+
 
 /*Dialog function for setting the preferences for all main functions*/
 function Preferences(){
@@ -2831,10 +2831,10 @@ function Preferences(){
 	Dialog.addNumber("Selection smoothing value (pixels)", sTY);
 	Dialog.addNumber("Head fraction of body (recommended from 0.10 to 0.35)", headTYFraction);
 	//Freeze test
-	//Dialog.addMessage("Fear Conditioning Parameters");
-	//Dialog.addNumber("Minimal area difference between frames (pixels)", mFreezeArea);
-	//Dialog.addNumber("Selection smoothing value (pixels)", sFreeze);
-	//Dialog.addNumber("Bin intervals (seconds)", tFreeze);
+	Dialog.addMessage("Fear Conditioning Parameters");
+	Dialog.addNumber("Minimal area difference between frames (pixels)", mFreezeArea);
+	Dialog.addNumber("Selection smoothing value (pixels)", sFreeze);
+	Dialog.addNumber("Bin intervals (seconds)", tFreeze);
 	//Defaults
 	Dialog.addMessage("To use default parameters, check the box below.\n Above values will be ignored");
 	Dialog.addCheckbox("Revert to default settings", false);
@@ -2865,9 +2865,9 @@ function Preferences(){
 	sTYL = Dialog.getNumber();
 	headTYFractionL = Dialog.getNumber();
 	//Freeze test
-	//mFreezeAreaL = Dialog.getNumber();
-	//sFreezeL = Dialog.getNumber();
-	//tFreezeL = Dialog.getNumber();
+	mFreezeAreaL = Dialog.getNumber();
+	sFreezeL = Dialog.getNumber();
+	tFreezeL = Dialog.getNumber();
 	//Default
 	default = Dialog.getCheckbox();
 	
@@ -2897,9 +2897,9 @@ function Preferences(){
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.smooth", sTYL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", headTYFractionL);
 		//Freeze maze
-		//call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", mFreezeAreaL);
-		//call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", sFreezeL);
-		//call("ij.Prefs.set", "MouBeAT_Prefs.fre.binInt", tFreezeL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", mFreezeAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", sFreezeL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.binInt", tFreezeL);
 	}else{
 		//General
 		call("ij.Prefs.set", "MouBeAT_Prefs.gen.units", "cm");
@@ -2926,9 +2926,9 @@ function Preferences(){
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.smooth", 3);
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.headFraction", 0.1);
 		//Freeze maze
-		//call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", 500);
-		//call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", 10);
-		//call("ij.Prefs.set", "MouBeAT_Prefs.fre.binInt", 30);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", 500);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", 10);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.binInt", 30);
 	}
 	
 	exit("Please restart Fiji/ImageJ for changes to take effect.");
@@ -4365,9 +4365,9 @@ function writePreferences(file){
 	print(file, "Mouse minimal area (pixels)\t"+ mTYArea);
 	print(file, "Selection smoothing value (pixels)\t"+ sTY);
 	//Fear Conditioning
-	/*print(file, "Mouse minimal area (pixels)\t"+ mFreezeArea);
+	print(file, "Mouse minimal area (pixels)\t"+ mFreezeArea);
 	print(file, "Selection smoothing value (pixels)\t"+ sFreeze);
-	print(file, "Bin intervals (seconds)\t"+ tFreeze);*/
+	print(file, "Bin intervals (seconds)\t"+ tFreeze);
 	
 }
 
@@ -4400,10 +4400,10 @@ function checkPreferences(array){
 	}
 	i = i + 2;
 	
-	/*Open/NOR
+	//Open/NOR
 	print(array[i] + ": current is "+ solidity + ". Saved is: " + array[i+1]);
 	if(solidity!=array[i+1]){print("DIFFERENT!!Consider changing settings for reanalysis of Open Field/Novel Object Recognition.");}
-	i = i + 2;*/
+	i = i + 2;
 		
 	if(wCube!=array[i+1]){
 		print(array[i] + ": current is "+ wCube + ". Saved is: " + array[i+1]);
@@ -4494,7 +4494,7 @@ function checkPreferences(array){
 		flag = false;
 	}
 	//Fear Conditioning
-	/*i = i + 2;
+	i = i + 2;
 	
 	if( mFreezeArea!=array[i+1]){
 		print(array[i] + ": current is "+  mFreezeArea + ". Saved is: " + array[i+1]);
@@ -4514,7 +4514,7 @@ function checkPreferences(array){
 		print(array[i] + ": current is "+  tFreeze + ". Saved is: " + array[i+1]);
 		print("DIFFERENT!!Consider changing settings for reanalysis of Fear Conditioning.");
 		flag = false;
-	}	*/
+	}	
 		
 	if(flag)
 		print("All good, no differences found...");	
