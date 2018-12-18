@@ -8,7 +8,7 @@ Open Field; Elevated Plus Maze; Morris Water Maze; Novel Object Recognition (inc
   
 requires("1.50a");
  //Menu
- var filemenu = newMenu("Mouse Behavioral Analysis Menu Tool", newArray("Batch Process Video Files", "Process Video File", "Open Field","Elevated Plus Maze", "Morris Water Maze", "Y Maze", "Open Previous Analysis File", "Preferences","-"));
+ var filemenu = newMenu("Mouse Behavioral Analysis Menu Tool", newArray("Batch Process Video Files", "Process Video File", "Open Field","Elevated Plus Maze", "Morris Water Maze", "Y Maze","Novel Object Recognition","Fear Conditioning", "Open Previous Analysis File", "Preferences","-"));
  //Strings fror general use
  var delFile = "Previous analysis file exists. Overwrite? Cancel will stop the macro.";
  var setThr = "Please set the threshold carefully and press OK (Image>Adjust>Threshold).";
@@ -95,7 +95,7 @@ macro "Mouse Behavioral Analysis Menu Tool - C000C111D98C111D88C111D89C111D86D99
 
 			/*create string to run the ffmpeg command to convert the avi file to an uncompressed 
 			avi file that can be open in ImageJ*/
-			string = ffmpegPath + " -loglevel quiet -i "+ dir + list[i] + " -f avi -vcodec mjpeg "+ savedir + list[i] + ".converted.avi && echo off";
+			string = pathFFmpeg + " -loglevel quiet -i "+ dir + list[i] + " -f avi -vcodec mjpeg "+ savedir + list[i] + ".converted.avi && echo off";
 			
 			os = getInfo("os.name");
 
