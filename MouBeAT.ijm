@@ -41,6 +41,9 @@ requires("1.50a");
  var sFreeze = call("ij.Prefs.get", "MouBeAT_Prefs.fre.smooth", "0");
  var tFreeze = call("ij.Prefs.get", "MouBeAT_Prefs.fre.binInt", "0");
  
+ //problem of different frame rate movies
+ var fpsOri=0;
+ 
  
 macro "Mouse Behavioral Analysis Menu Tool - C000C111D98C111D88C111D89C111D86D99C111D87C111D85C111D8aD97C111D9aC222D79D8bC222D7aC222D96C222D84C222D78C222D7bC222D76D9bC222D95C222D77C333Da9C333D75C333D74C333D73Da8C333DaaC333D8cC333C444D83C444D7cDa7C444D6aC444D69C444D94C444C555D9cC555DabC555Da6C555D68C555D6bC555D66C555D72C555C666D67C666D65C666D64D7dDa5Db9C666D63C666D8dDb8C666DbaC666D82D93C666DacC666C777D6cC777D7eC777Da4Db7C777D9dDbbC777D59D7fC777D5aD62D6dDb6C777D6fC777D8eC777C888D6eD92DbcC888Da3DadDcaC888D57D58Db5Dc9C888D56Dc7C888D5bD8fDc8C888D9eDc6DcbC888D9fDaeDb4DbdDc5C888D53D55D71D91DccC888D81Da1Da2Dc1Dd8C888D54D5cDafDb1Db2Db3Dc0Dc2Dd0Dd1Dd6DdaDdbDdfDe0De8De9DeaC888D52D5fDc3Dd2Dd5Dd7Dd9C888D5dD90Da0Db0DbeDc4Dd3DdcDdeDefDf2C888D5eDbfDcdDcfDd4De1DebDfaC888D4aD61DddDe2Df0Df1Df5Df8C999D80DceDe3DeeDf3Df4Df9DfbDfdDfeC999D41D47D49De7DecDedDf6Df7DfcDffC999D40D42D46D4bD4cD4dD51De4C999D43D44D48D4eD4fD50D70De5De6C999D10D20D30D31D36D3cD45D60C999D17D32D3bD3fC999D21D22D26D2eD2fD34D37D39D3aD3dD3eC999D15D16D23D29D33C999D07D11D12D14D18D19D1eD1fD25D27D2aD2dD35D38C999D00D05D06D0fD1aD24D2bD2cC999D01D04D09D0cD13D1bD1cD1dD28C999D02D0aD0bD0eC999D08D0dC999D03"{
  	choice = getArgument();
@@ -350,12 +353,12 @@ function MouseCubeTracker(){
 	//analyse particles function	
 	SEpoints = makeAnalysis(stagger, fps, mCubeArea);
 	print(f, "staggerPoints\t" + SEpoints[0] +"\t"+ SEpoints[1]);
-	if(fps == 25)
+	if(fps == fpsOri)
 		totalslices = SEpoints[1] - SEpoints[0];
 	else
 		totalslices = round((SEpoints[1] - SEpoints[0])/ (100/fps));
 	
-
+	print(f, "fpsOri\t" + fpsOri);
 	//Save ROIs to a file in the folder of the image
 	roiManager("Show All without labels");
 	roiManager("Show None");
@@ -382,10 +385,10 @@ results and a summary of the results*/
 function getParameters(fps,dir, imTitle, totalSlices){
 
 	//Determine the delay between ROIs
-	if(fps != 25){
+	if(fps == fpsOri){
 		delay = 1/fps;
 	}else
-		delay = 1/25;
+		delay = (1/fpsOri) * (100/fps);
 	
 
 	run("Set Measurements...", "centroid redirect=None decimal=3");
@@ -713,11 +716,9 @@ function getDirection(dir, imTitle, time, headAngle, fps, i, pposition){
 }
 
 
-/*Function to evaluate the Elevated Maze mice proof
-It will be track the mouse in the maze and
-calculate the time spent in the closed arms vs open arms
-it will also try to verify if the mouse was looking outside the
-edge in the open arms (exploring)*/
+/*Function to evaluate the Elevated Maze mice proof. It will be track the mouse in the maze and
+calculate the time spent in the closed arms vs open arms it will also try to verify if the mouse 
+was looking outside the edge in the open arms (exploring)*/
 function MiceElevatedPuzzleTracker(){
 
 	checkAndSort();
@@ -842,12 +843,14 @@ function MiceElevatedPuzzleTracker(){
 	SEpoints = makeAnalysis(stagger, fps, mElevatedArea);
 	print(f, "staggerPoints\t" + SEpoints[0] +"\t"+ SEpoints[1]);
 	print(f, "Arms direction\t" + openDir);
-	if(fps == 25)
+	if(fps == fpsOri)
 		totalslices = SEpoints[1] - SEpoints[0];
 	else
 		totalslices = round((SEpoints[1] - SEpoints[0])/ (100/fps));
-
-
+	
+	//write fpsOri to the file preferences
+	print(f, "fpsOri\t" + fpsOri);
+	
 	roiManager("Show All without labels");
 	roiManager("Show None");
 
@@ -876,10 +879,10 @@ results and a summary of the results*/
 function getParametersET(fps, dir, imTitle, armsL, totalSlices, openDir){
 
 	//Determine the delay between ROIs
-	if(fps != 25){
+	if(fps == fpsOri){
 		delay = 1/fps;
 	}else
-		delay = 1/25;
+		delay = (1/fpsOri) * (100/fps);
 
 	run("Set Measurements...", "area centroid redirect=None decimal=3");
 	
@@ -1065,7 +1068,7 @@ function getParametersET(fps, dir, imTitle, armsL, totalSlices, openDir){
 	setResult("Value", i, nExplo);
 	i = i + 1;
 	setResult("Label", i, "Time in central area");
-	setResult("Value", i, (totalSlices*delay)-closedTime-openTime);
+	setResult("Value", i, (((totalSlices*delay)-closedTime)-openTime));
 	
 	updateResults();
 	selectWindow("Results");
@@ -1410,7 +1413,10 @@ regarding it. Also save the threshold to file*/
 	//analyse particles function (here we only need the first slice analysed)
 	SEpoints = makeAnalysis(stagger, fps, mSwimmingArea);
 	print(f, "staggerPoints\t" + SEpoints[0] +"\t"+ SEpoints[1]);
-
+	
+	//Save the original fps from the video file
+	print(f, "fpsOri\t" + fpsOri);
+	
 	roiManager("Show All without labels");
 	roiManager("Show None");
 	
@@ -1435,11 +1441,11 @@ regarding it. Also save the threshold to file*/
 result of the ROI analysis and then prints them to 2 files with the individual
 results and a summary of the results*/
 function getParametersSM(fps,dir, imTitle, diameter, totalSlices){
-	//Get delay between frames analyzed
-	if(fps != 25){
+	//Determine the delay between ROIs
+	if(fps == fpsOri){
 		delay = 1/fps;
 	}else
-		delay = 1/25;
+		delay = (1/fpsOri) * (100/fps);
 	
 	run("Set Measurements...", "centroid redirect=None decimal=3");
 	
@@ -1779,10 +1785,13 @@ regarding it. Also save the threshold to file*/
 	//analyse particles function
 	SEpoints = makeAnalysis(stagger, fps, mCubeArea);
 	print(f, "staggerPoints\t" + SEpoints[0] +"\t"+ SEpoints[1]);
-	if(fps == 25)
+	if(fps == fpsOri)
 		totalslices = SEpoints[1] - SEpoints[0];
 	else
 		totalslices = round((SEpoints[1] - SEpoints[0])/ (100/fps));
+		
+	//Save the original fps of the file
+	print(f, "fpsOri\t" + fpsOri);
 	
 	roiManager("Show All without labels");
 	roiManager("Show None");
@@ -1806,10 +1815,10 @@ result of the ROI analysis and then prints them to 2 files with the individual
 results and a summary of the results*/
 function getParametersRT(fps,dir, imTitle, n, totalSlices){
 	//Determine the delay between ROIs
-	if(fps != 25){
+	if(fps == fpsOri){
 		delay = 1/fps;
 	}else
-		delay = 1/25;
+		delay = (1/fpsOri) * (100/fps);
 	
 
 	run("Set Measurements...", "centroid redirect=None decimal=3");
@@ -2191,6 +2200,9 @@ dimensions of the triangle*/
 	SEpoints = makeAnalysis(stagger, fps, mTYArea);
 	print(f, "staggerPoints\t" + SEpoints[0] +"\t"+ SEpoints[1]);
 	
+	//Save the original fps of the file
+	print(f, "fpsOri\t" + fpsOri);
+	
 	roiManager("Show All without labels");
 	roiManager("Show None");
 
@@ -2215,10 +2227,10 @@ result of the ROI analysis and then prints them to 2 files with the individual
 results and a summary of the results*/
 function getParametersTY(fps, dir, imTitle, sStart){
 	//Determine the delay between ROIs
-	if(fps != 25){
+	if(fps == fpsOri){
 		delay = 1/fps;
 	}else
-		delay = 1/25;
+		delay = (1/fpsOri) * (100/fps);
 
 	run("Set Measurements...", "area centroid redirect=None decimal=3");
 	
@@ -2680,6 +2692,9 @@ function fearConditioning(){
 	SEpoints = makeAnalysis(stagger, fps, mFreezeArea);
 	print(f, "staggerPoints\t" + SEpoints[0] +"\t"+ SEpoints[1]);
 	
+	//Save the original fps of the file
+	print(f, "fpsOri\t" + fpsOri);
+	
 	//Save ROIs to a file in the folder of the image
 	roiManager("Show All without labels");
 	roiManager("Show None");
@@ -2704,8 +2719,13 @@ result of the ROI analysis and then prints them to 2 files with the individual
 results and a summary of the results*/
 
 function freezeCheck(fps, dir, imTitle, sStart){
+
 	//Determine the delay between ROIs
-	delay = 1/fps;
+	if(fps == fpsOri){
+		delay = 1/fps;
+	}else
+		delay = (1/fpsOri) * (100/fps);
+		
 	run("Select None");
 	
 	freezeT = 0;
@@ -2934,7 +2954,7 @@ function Preferences(){
 	exit("Please restart Fiji/ImageJ for changes to take effect.");
 }
 
-/*Function to make checks that images are ni the right format
+/*Function to make checks that images are in the right format
 and if not make them so*/
 function checkAndSort(){
 	if (nSlices==1) exit("Stack required");
@@ -2961,6 +2981,8 @@ function dialog1(option){
 	 * 6 - Gaussian blur to apply to stack
 	 * 7 - Stagger analysis of ROIs defined by user
 	 */
+	fpsOri = getFrameRate();
+	
 	temp = newArray(9); 
 	Array.fill(temp, 0);
 	stringA = newArray("Open Field Maze", "Elevated Plus Maze", "Morris Water Maze", "Novel Object Recognition", "Y Maze", "Fear Conditioning Maze");
@@ -2972,8 +2994,8 @@ function dialog1(option){
 	Dialog.create(str);
 	Dialog.addRadioButtonGroup("Mice color", array1, 1, 2, "Black mice in white background"); //0
 	
-	Dialog.addMessage("Do you want to reduce the time resolution to increase analysis speed?");
-	Dialog.addRadioButtonGroup("Frames per second (25 is all)", array2, 1, 4, "25");	//1
+	Dialog.addMessage("Do you want to reduce the time resolution to increase analysis speed?\nYour file has a fps of "+ fpsOri+". All values above that will be consider full speed.");
+	Dialog.addRadioButtonGroup("Frames per second: ", array2, 1, 4, "25");	//1
 	
 	//Specific dialog options for each macro
 	if(option == 1 || option == 4){
@@ -3021,6 +3043,8 @@ function dialog1(option){
 		temp[0] = 1;
 	//fps	
 	temp[1] = parseInt(Dialog.getRadioButton());
+	if(fpsOri>25) temp[1] = fpsOri;
+	else if(temp[1]>fpsOri) temp[1] = fpsOri;
 
 	//Boxes and cross
 	if(option == 1 || option == 2 || option == 4){
@@ -3094,7 +3118,7 @@ function makeAnalysis(flag, fps, area){
 		startEnd[0] = 1;
 		startEnd[1] = nSlices;
 		setBatchMode("hide");
-		if(fps == 25){
+		if(fps == fpsOri){
 			
 			run("Analyze Particles...", "size="+area+"-Infinity pixel include add stack");
 		}else{
@@ -3114,7 +3138,7 @@ function makeAnalysis(flag, fps, area){
 		startEnd[0] = s;
 		startEnd[1] = e + 1 ;
 		setBatchMode("hide");
-		if(fps == 25){
+		if(fps == fpsOri){
 			for(i = s; i < e; i++){
 				setSlice(i);
 				run("Analyze Particles...", "size="+area+"-Infinity pixel include add slice");
@@ -3774,7 +3798,14 @@ function fearRedo(temp, option){
 	thrMin = parseInt(temp[jump+1]); thrMax = parseInt(temp[jump+2]);
 	drkMin = parseInt(temp[jump+4]); drkMax = parseInt(temp[jump+5]);
 	staggerS =  parseInt(temp[jump+7]);  staggerE = parseInt(temp[jump + 8]);
-	temp2 = Array.slice(temp, jump+9, 100);
+	if(startsWith(temp[jump+9], "fpsOri")){
+		fpsOri = parseInt(temp[jump+10]);
+		temp2 = Array.slice(temp,jump + 11,100);
+	}else{
+		fpsOri = 25;
+		temp2 = Array.slice(temp, jump+9, 100);
+	} 
+	
 	checkPreferences(temp2);
 	
 	if(option == 0){
@@ -3852,7 +3883,14 @@ function tyRedo(temp, option){
 	thrMin = parseInt(temp[jump+1]); thrMax = parseInt(temp[jump+2]);
 	drkMin = parseInt(temp[jump+4]); drkMax = parseInt(temp[jump+5]);
 	staggerS =  parseInt(temp[jump+7]);  staggerE = parseInt(temp[jump + 8]);
-	temp2 = Array.slice(temp, jump+9, 100);
+	if(startsWith(temp[jump+9], "fpsOri")){
+		fpsOri = parseInt(temp[jump+10]);
+		temp2 = Array.slice(temp,jump + 11,100);
+	}else{
+		fpsOri = 25;
+		temp2 = Array.slice(temp, jump+9, 100);
+	} 
+	
 	checkPreferences(temp2);
 	
 	if(option == 0){
@@ -3934,11 +3972,18 @@ function objectsRedo(temp, option){
 	thrMin = parseInt(temp[21 + count + 1]); thrMax = parseInt(temp[21 + count + 2]);
 	drkMin = parseInt(temp[21 + count + 4]); drkMax = parseInt(temp[21 + count + 5]);
 	staggerS =  parseInt(temp[21 + count + 7]);  staggerE = parseInt(temp[21 + count + 8]);
-	temp2 = Array.slice(temp, 21+count+9, 100);
+	if(startsWith(temp[21 + count + 9], "fpsOri")){
+		fpsOri = parseInt(temp[21 + count + 10]);
+		temp2 = Array.slice(temp,21 + count + 11,100);
+	}else{
+		fpsOri = 25;
+		temp2 = Array.slice(temp, 21+count+9, 100);
+	} 
+	
 	checkPreferences(temp2);
 	
 	
-	if(fps == 25)
+	if(fps == fpsOri)
 		totalslices = staggerE - staggerS;
 	else
 		totalslices = round((staggerE - staggerS)/ (100/fps));
@@ -4013,8 +4058,15 @@ function swimRedo(temp, option){
 	pw = parseFloat(temp[22]); py = parseFloat(temp[23]);
 	thrMin = parseInt(temp[25]); thrMax = parseInt(temp[26]);
 	diameter = parseInt(temp[28]);
-	staggerS = parseInt(temp[30]);  staggerE = parseInt(temp[31]); 
-	temp2 = Array.slice(temp, 32, 100);
+	staggerS = parseInt(temp[30]);  staggerE = parseInt(temp[31]);
+	if(startsWith(temp[32], "fpsOri")){
+		fpsOri = parseInt(temp[33]);
+		temp2 = Array.slice(temp,34,100);
+	}else{
+		fpsOri = 25;
+		temp2 = Array.slice(temp,32,100);
+	}  
+
 	checkPreferences(temp2);
 	
 	if(option == 0){
@@ -4092,11 +4144,18 @@ function crossRedo(temp, option){
 	drkMin = parseInt(temp[jump+4]); drkMax = parseInt(temp[jump+5]);
 	staggerS = parseInt(temp[jump + 7]);  staggerE = parseInt(temp[jump + 8]);
 	openDir =  parseInt(temp[jump + 10]);
-	temp2 = Array.slice(temp, jump + 11, 100);
+	if(startsWith(temp[jump+11], "fpsOri")){
+		fpsOri = parseInt(temp[jump+12]);
+		temp2 = Array.slice(temp,jump+13,100);
+	}else{
+		fpsOri = 25;
+		temp2 = Array.slice(temp,jump+11,100);
+	} 
+
 	checkPreferences(temp2);
 	
 	//Get data of the dectetions
-	if(fps == 25)
+	if(fps == fpsOri)
 		totalslices = staggerE - staggerS;
 	else
 		totalslices = round((staggerE - staggerS) / (100/fps));
@@ -4169,12 +4228,20 @@ function cubeRedo(temp, option){
 	pw = parseFloat(temp[19]); py = parseFloat(temp[20]);
 	thrMin = parseInt(temp[22]); thrMax = parseInt(temp[23]);
 	drkMin = parseInt(temp[25]); drkMax = parseInt(temp[26]);
-	staggerS = parseInt(temp[28]);  staggerE = parseInt(temp[29]); 
-	temp2 = Array.slice(temp,30,100);
+	staggerS = parseInt(temp[28]);  staggerE = parseInt(temp[29]);
+	if(startsWith(temp[30], "fpsOri")){
+		fpsOri = parseInt(temp[31]);
+		temp2 = Array.slice(temp,32,100);
+	}else{
+		fpsOri = 25;
+		temp2 = Array.slice(temp,30,100);
+	} 
+		
+	
 	checkPreferences(temp2);
 	
 	//Get data of the dectetions
-	if(fps == 25)
+	if(fps == fpsOri)
 		totalslices = staggerE - staggerS;
 	else
 		totalslices = round((staggerE - staggerS)/ (100/fps));
@@ -4255,12 +4322,12 @@ function setThrandAna(thrMin, thrMax, fps, option, start, end){
 			n = mFreezeArea;
 		setBatchMode("hide");
 		//analyse particles taking in consideration the reduction in fps if selected
-		if(fps == 25)
+		if(fps == fpsOri)
 			j = 1;
 		else
 			j = 100/fps;
 			
-		for(i = start; i < end + 1; i = i + j){
+		for(i = start; i < end; i = i + j){
 				setSlice(i);
 				run("Analyze Particles...", "size="+n+"-Infinity pixel include add slice");
 			}
@@ -4401,9 +4468,9 @@ function checkPreferences(array){
 	i = i + 2;
 	
 	//Open/NOR
-	print(array[i] + ": current is "+ solidity + ". Saved is: " + array[i+1]);
+	/*print(array[i] + ": current is "+ solidity + ". Saved is: " + array[i+1]);
 	if(solidity!=array[i+1]){print("DIFFERENT!!Consider changing settings for reanalysis of Open Field/Novel Object Recognition.");}
-	i = i + 2;
+	i = i + 2;*/
 		
 	if(wCube!=array[i+1]){
 		print(array[i] + ": current is "+ wCube + ". Saved is: " + array[i+1]);
@@ -4548,4 +4615,21 @@ function movingAverage(window, array){
 	return fData;
 	
 }
+
+/*Get the frame rate of the image from the Info data
+If it doesn´t find it it asks for the user to input it or just use the 25fps one*/
+function getFrameRate(){
+	info = getImageInfo();
+	index1 = indexOf(info, "Frame rate: ");
+	if(index1==-1){
+		return(getNumber("No frame rate detected. Insert or use 25 fps", 25));
+	} 
+	index2 = indexOf(info, " fps");
+	if(index2==-1){
+		return(getNumber("No frame rate detected. Insert or use 25 fps", 25));
+	} 
+	return round(parseFloat(substring(info, index1+12, index2)));
+}
+
+
 
