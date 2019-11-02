@@ -8,7 +8,7 @@ Open Field; Elevated Plus Maze; Morris Water Maze; Novel Object Recognition (inc
   
 requires("1.50a");
  //Menu
- var filemenu = newMenu("Mouse Behavioral Analysis Menu Tool", newArray("Batch Process Video Files", "Process Video File", "Open Field","Elevated Plus Maze", "Morris Water Maze", "Y Maze","Novel Object Recognition","Fear Conditioning", "Open Previous Analysis File", "Preferences","-"));
+ var filemenu = newMenu("Mouse Behavioral Analysis Menu Tool", newArray("Batch Process Video Files", "Process Video File", "Open Field","Elevated Plus Maze", "Morris Water Maze", "Y Maze","Novel Object Recognition","Fear Conditioning", "Open Previous Analysis File","-", "General Preferences","Open Field Preferences","Elevated Plus Preferences","Morris Water Preferences","T/Y Preferences","Freeze Preferences","-"));
  //Strings fror general use
  var delFile = "Previous analysis file exists. Overwrite? Cancel will stop the macro.";
  var setThr = "Please set the threshold carefully and press OK (Image>Adjust>Threshold).";
@@ -48,8 +48,8 @@ requires("1.50a");
 macro "Mouse Behavioral Analysis Menu Tool - C000C111D98C111D88C111D89C111D86D99C111D87C111D85C111D8aD97C111D9aC222D79D8bC222D7aC222D96C222D84C222D78C222D7bC222D76D9bC222D95C222D77C333Da9C333D75C333D74C333D73Da8C333DaaC333D8cC333C444D83C444D7cDa7C444D6aC444D69C444D94C444C555D9cC555DabC555Da6C555D68C555D6bC555D66C555D72C555C666D67C666D65C666D64D7dDa5Db9C666D63C666D8dDb8C666DbaC666D82D93C666DacC666C777D6cC777D7eC777Da4Db7C777D9dDbbC777D59D7fC777D5aD62D6dDb6C777D6fC777D8eC777C888D6eD92DbcC888Da3DadDcaC888D57D58Db5Dc9C888D56Dc7C888D5bD8fDc8C888D9eDc6DcbC888D9fDaeDb4DbdDc5C888D53D55D71D91DccC888D81Da1Da2Dc1Dd8C888D54D5cDafDb1Db2Db3Dc0Dc2Dd0Dd1Dd6DdaDdbDdfDe0De8De9DeaC888D52D5fDc3Dd2Dd5Dd7Dd9C888D5dD90Da0Db0DbeDc4Dd3DdcDdeDefDf2C888D5eDbfDcdDcfDd4De1DebDfaC888D4aD61DddDe2Df0Df1Df5Df8C999D80DceDe3DeeDf3Df4Df9DfbDfdDfeC999D41D47D49De7DecDedDf6Df7DfcDffC999D40D42D46D4bD4cD4dD51De4C999D43D44D48D4eD4fD50D70De5De6C999D10D20D30D31D36D3cD45D60C999D17D32D3bD3fC999D21D22D26D2eD2fD34D37D39D3aD3dD3eC999D15D16D23D29D33C999D07D11D12D14D18D19D1eD1fD25D27D2aD2dD35D38C999D00D05D06D0fD1aD24D2bD2cC999D01D04D09D0cD13D1bD1cD1dD28C999D02D0aD0bD0eC999D08D0dC999D03"{
  	choice = getArgument();
  	
- 	if(units == 0 && choice != "Preferences"){
- 			showMessage("It appears this is the first time you run MouBeAT.\n Please run Preferences from the Toolbox menu before starting.");
+ 	if(units == 0 && choice != "General Preferences"){
+ 			showMessage("It appears this is the first time you run MouBeAT.\n Please run General Preferences from the Toolbox menu before starting.");
  		exit();
  	}else{
 	 	if(choice != "-"){
@@ -61,7 +61,12 @@ macro "Mouse Behavioral Analysis Menu Tool - C000C111D98C111D88C111D89C111D86D99
 	 		else if(choice == "Novel Object Recognition") {MouseRegionsTracker(); }
 	 		else if(choice == "Y Maze") {MiceYTTracker(); }
 	 		else if(choice == "Open Previous Analysis File") {openPreviousAnalysis(); }
-	 		else if(choice == "Preferences") {Preferences(); }
+	 		else if(choice == "General Preferences") {GPreferences(); }
+	 		else if(choice == "Open Field Preferences") {OFPreferences(); }
+	 		else if(choice == "Elevated Plus Preferences") {EPPreferences(); }
+	 		else if(choice == "Morris Water Preferences") {MWPreferences(); }
+	 		else if(choice == "T/Y Preferences") {TYPreferences(); }
+	 		else if(choice == "Freeze Preferences") {FrePreferences(); }
 	 		else if(choice == "Fear Conditioning"){fearConditioning();}
 	 	}
  	}
@@ -2818,7 +2823,7 @@ function freezeCheck(fps, dir, imTitle, sStart){
 
 
 /*Dialog function for setting the preferences for all main functions*/
-function Preferences(){
+function GPreferences(){
 	
 	Dialog.create("MouBeAT Preferences");
 	//General preferences
@@ -2826,68 +2831,17 @@ function Preferences(){
 	Dialog.addChoice("Units of work", newArray("m", "cm", "mm","microns"), units);
 	Dialog.addNumber("Gaussian blur sigma value", gauVal);
 	Dialog.addNumber("Minimum displacement to consider a moving mouse (units)", dispVal);
-	//Cube and Objects mazes
-	Dialog.addMessage("Open Field Preferences");
-	//Dialog.addNumber("Rearing - Solidity (OF only)", solidity);
-	Dialog.addNumber("Default width of box (units)", wCube);
-	Dialog.addNumber("Mouse minimal area (pixels)", mCubeArea);
-	Dialog.addNumber("Head fraction of body (recommended from 0.10 to 0.35)", headCubeFraction);
-	//Elevated maze
-	Dialog.addMessage("Elevated Plus maze Preferences");
-	Dialog.addNumber("Arms width (units)", wElevated);
-	Dialog.addNumber("Length of arms (units)", lElevated);
-	Dialog.addNumber("Mouse minimal area (pixels)", mElevatedArea);
-	Dialog.addNumber("Selection smoothing value (pixels)", sElevated);
-	Dialog.addNumber("Head fraction of body (recommended from 0.10 to 0.35)", headElevatedFraction);
-	//Swimming maze
-	Dialog.addMessage("Morris Water maze Preferences");
-	Dialog.addNumber("Pool diameter (units)", dSwimming);
-	Dialog.addNumber("Mouse minimal area (pixels)", mSwimmingArea);
-	Dialog.addNumber("Distance to pool wall to consider at wall (units)", poolWD);
-	//T/Y maze
-	Dialog.addMessage("T/Y maze Preferences");
-	Dialog.addNumber("Arms width (units)", wTY);
-	Dialog.addNumber("Mouse minimal area (pixels)", mTYArea);
-	Dialog.addNumber("Selection smoothing value (pixels)", sTY);
-	Dialog.addNumber("Head fraction of body (recommended from 0.10 to 0.35)", headTYFraction);
-	//Freeze test
-	Dialog.addMessage("Fear Conditioning Parameters");
-	Dialog.addNumber("Minimal area difference between frames (pixels)", mFreezeArea);
-	Dialog.addNumber("Selection smoothing value (pixels)", sFreeze);
-	Dialog.addNumber("Bin intervals (seconds)", tFreeze);
+	
 	//Defaults
 	Dialog.addMessage("To use default parameters, check the box below.\n Above values will be ignored");
-	Dialog.addCheckbox("Revert to default settings", false);
+	Dialog.addCheckbox("Revert to default settings for all mazes!", false);
 	Dialog.show();
 	
 	//General
 	unitsL = Dialog.getChoice();
 	gauValL = Dialog.getNumber();
 	dispValL = Dialog.getNumber();
-	//Cube maze
-	//solidityL = Dialog.getNumber();
-	wCubeL = Dialog.getNumber();
-	mCubeAreaL = Dialog.getNumber();
-	headCubeFractionL = Dialog.getNumber();
-	//Elevated maze
-	wElevatedL = Dialog.getNumber();
-	lElevatedL = Dialog.getNumber();
-	mElevatedAreaL = Dialog.getNumber();
-	sElevatedL = Dialog.getNumber();
-	headElevatedFractionL = Dialog.getNumber();
-	//Swimming maze
-	dSwimmingL = Dialog.getNumber();
-	mSwimmingAreaL = Dialog.getNumber();
-	poolWDL = Dialog.getNumber();
-	//T/Y maze
-	wTYL = Dialog.getNumber();
-	mTYAreaL = Dialog.getNumber();
-	sTYL = Dialog.getNumber();
-	headTYFractionL = Dialog.getNumber();
-	//Freeze test
-	mFreezeAreaL = Dialog.getNumber();
-	sFreezeL = Dialog.getNumber();
-	tFreezeL = Dialog.getNumber();
+	
 	//Default
 	default = Dialog.getCheckbox();
 	
@@ -2920,6 +2874,7 @@ function Preferences(){
 		call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", mFreezeAreaL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", sFreezeL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.fre.binInt", tFreezeL);
+		
 	}else{
 		//General
 		call("ij.Prefs.set", "MouBeAT_Prefs.gen.units", "cm");
@@ -2939,7 +2894,7 @@ function Preferences(){
 		//Swimming maze
 		call("ij.Prefs.set", "MouBeAT_Prefs.swim.dia", 125);
 		call("ij.Prefs.set", "MouBeAT_Prefs.swim.marea", 50);
-		call("ij.Prefs.set", "MouBeAT_Prefs.swim.poolWD",10); 
+		call("ij.Prefs.set", "MouBeAT_Prefs.swim.poolWD",10);
 		//T/Y maze
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.width", 7);
 		call("ij.Prefs.set", "MouBeAT_Prefs.ty.marea", 500);
@@ -2953,6 +2908,207 @@ function Preferences(){
 	
 	exit("Please restart Fiji/ImageJ for changes to take effect.");
 }
+
+
+/*Dialog function for setting the preferences for Open Field functions*/
+function OFPreferences(){
+	
+	Dialog.create("MouBeAT OF Preferences");
+	//Cube and Objects mazes
+	Dialog.addMessage("Open Field Preferences");
+	//Dialog.addNumber("Rearing - Solidity (OF only)", solidity);
+	Dialog.addNumber("Default width of box (units)", wCube);
+	Dialog.addNumber("Mouse minimal area (pixels)", mCubeArea);
+	Dialog.addNumber("Head fraction of body (recommended from 0.10 to 0.35)", headCubeFraction);
+	//Defaults
+	Dialog.addMessage("To use default parameters, check the box below.\n Above values will be ignored");
+	Dialog.addCheckbox("Revert to default settings for OF maze!", false);
+	Dialog.show();
+	
+	
+	//Cube maze
+	//solidityL = Dialog.getNumber();
+	wCubeL = Dialog.getNumber();
+	mCubeAreaL = Dialog.getNumber();
+	headCubeFractionL = Dialog.getNumber();
+	//Default
+	default = Dialog.getCheckbox();
+	
+	if(!default){
+		//Cube maze
+		//call("ij.Prefs.set", "MouBeAT_Prefs.cube.soli", solidityL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.width", wCubeL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.marea", mCubeAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.headFraction", headCubeFractionL);
+		
+	}else{
+		//Cube maze
+		//call("ij.Prefs.set", "MouBeAT_Prefs.cube.soli", 0.8);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.width", 38);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.marea", 500);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.headFraction", 0.3);
+	}
+	
+	exit("Please restart Fiji/ImageJ for changes to take effect.");
+}
+
+/*Dialog function for setting the preferences for Elevated plus functions*/
+function EPPreferences(){
+	
+	Dialog.create("MouBeAT Elevated Plus Preferences");
+	//Elevated maze
+	Dialog.addMessage("Elevated Plus maze Preferences");
+	Dialog.addNumber("Arms width (units)", wElevated);
+	Dialog.addNumber("Length of arms (units)", lElevated);
+	Dialog.addNumber("Mouse minimal area (pixels)", mElevatedArea);
+	Dialog.addNumber("Selection smoothing value (pixels)", sElevated);
+	Dialog.addNumber("Head fraction of body (recommended from 0.10 to 0.35)", headElevatedFraction);
+	//Defaults
+	Dialog.addMessage("To use default parameters, check the box below.\n Above values will be ignored");
+	Dialog.addCheckbox("Revert to default settings for EP maze", false);
+	Dialog.show();
+	
+	//Elevated maze
+	wElevatedL = Dialog.getNumber();
+	lElevatedL = Dialog.getNumber();
+	mElevatedAreaL = Dialog.getNumber();
+	sElevatedL = Dialog.getNumber();
+	headElevatedFractionL = Dialog.getNumber();
+	//Default
+	default = Dialog.getCheckbox();
+	
+	if(!default){
+		//Elevated maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.width", wElevatedL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.length", lElevatedL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.marea", mElevatedAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.smooth", sElevatedL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", headElevatedFractionL);
+	}else{
+		//Elevated maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.width", 7);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.length", 25);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.marea", 1000);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.smooth", 3);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", 0.2);
+	}
+	
+	exit("Please restart Fiji/ImageJ for changes to take effect.");
+}	
+
+/*Dialog function for setting the preferences for Morris Watter functions*/
+function MWPreferences(){
+	
+	Dialog.create("MouBeAT Morris Water Preferences");
+	//Swimming maze
+	Dialog.addMessage("Morris Water maze Preferences");
+	Dialog.addNumber("Pool diameter (units)", dSwimming);
+	Dialog.addNumber("Mouse minimal area (pixels)", mSwimmingArea);
+	Dialog.addNumber("Distance to pool wall to consider at wall (units)", poolWD);
+	//Defaults
+	Dialog.addMessage("To use default parameters, check the box below.\n Above values will be ignored");
+	Dialog.addCheckbox("Revert to default settings for MW maze", false);
+	Dialog.show();
+	
+	//Swimming maze
+	dSwimmingL = Dialog.getNumber();
+	mSwimmingAreaL = Dialog.getNumber();
+	poolWDL = Dialog.getNumber();
+	//Default
+	default = Dialog.getCheckbox();
+	
+	if(!default){
+		//Swimming maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.swim.dia", dSwimmingL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.swim.marea", mSwimmingAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.swim.poolWD", poolWDL);
+	}else{
+		//Swimming maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.swim.dia", 125);
+		call("ij.Prefs.set", "MouBeAT_Prefs.swim.marea", 50);
+		call("ij.Prefs.set", "MouBeAT_Prefs.swim.poolWD",10); 
+	}
+	
+	exit("Please restart Fiji/ImageJ for changes to take effect.");
+}
+
+/*Dialog function for setting the preferences for T/Y maze functions*/
+function TYPreferences(){
+	
+	Dialog.create("MouBeAT T/Y maze Preferences");
+	//T/Y maze
+	Dialog.addMessage("T/Y maze Preferences");
+	Dialog.addNumber("Arms width (units)", wTY);
+	Dialog.addNumber("Mouse minimal area (pixels)", mTYArea);
+	Dialog.addNumber("Selection smoothing value (pixels)", sTY);
+	Dialog.addNumber("Head fraction of body (recommended from 0.10 to 0.35)", headTYFraction);
+	//Defaults
+	Dialog.addMessage("To use default parameters, check the box below.\n Above values will be ignored");
+	Dialog.addCheckbox("Revert to default settings T/T maze", false);
+	Dialog.show();
+	
+	//T/Y maze
+	wTYL = Dialog.getNumber();
+	mTYAreaL = Dialog.getNumber();
+	sTYL = Dialog.getNumber();
+	headTYFractionL = Dialog.getNumber();
+	//Default
+	default = Dialog.getCheckbox();
+	
+	if(!default){
+		//T/Y maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.width", wTYL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.marea", mTYAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.smooth", sTYL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", headTYFractionL);
+	}else{
+		//T/Y maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.width", 7);
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.marea", 500);
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.smooth", 3);
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.headFraction", 0.1);
+	}
+	
+	exit("Please restart Fiji/ImageJ for changes to take effect.");
+}
+
+/*Dialog function for setting the preferences for Freeze functions*/
+function FrePreferences(){
+	
+	Dialog.create("MouBeAT Freeze Preferences");
+	//Freeze test
+	Dialog.addMessage("Fear Conditioning Parameters");
+	Dialog.addNumber("Minimal area difference between frames (pixels)", mFreezeArea);
+	Dialog.addNumber("Selection smoothing value (pixels)", sFreeze);
+	Dialog.addNumber("Bin intervals (seconds)", tFreeze);
+	//Defaults
+	Dialog.addMessage("To use default parameters, check the box below.\n Above values will be ignored");
+	Dialog.addCheckbox("Revert to default settings for Freeze maze", false);
+	Dialog.show();
+	
+	//Freeze test
+	mFreezeAreaL = Dialog.getNumber();
+	sFreezeL = Dialog.getNumber();
+	tFreezeL = Dialog.getNumber();
+	//Default
+	default = Dialog.getCheckbox();
+	
+	if(!default){
+		//Freeze maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", mFreezeAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", sFreezeL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.binInt", tFreezeL);
+	}else{
+		//Freeze maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", 500);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", 10);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.binInt", 30);
+	}
+	
+	exit("Please restart Fiji/ImageJ for changes to take effect.");
+}
+
+
 
 /*Function to make checks that images are in the right format
 and if not make them so*/
