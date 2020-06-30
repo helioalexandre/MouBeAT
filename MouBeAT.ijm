@@ -205,12 +205,11 @@ function ProcessVideo(){
 		}else if(startsWith(rows[i], "    Stream") && streamFlag){
 			columns = split(rows[i], " :,");
 			streamFlag = false;
-			for(i = 0; i < columns.length;i++){
-				if(columns[i] == "fps"){
-					originalFPS = parseInt(columns[i-1]);
-					break;
-				}
-			}	
+			j=0;
+			while(columns[j] != "fps")
+				j++;		
+			originalFPS = parseInt(columns[j-1]);
+				
 		}else if(startsWith(rows[i], "frame=")){
 			columns = split(rows[i], " =");
 			frameCount = parseInt(columns[1]);
@@ -220,6 +219,7 @@ function ProcessVideo(){
 		
 	}
 	File.delete(str);
+	
 
 	//get a tif sample to determine final size of converted tiff stack
 	strTiff= path + ".temp_output.tiff";
@@ -268,7 +268,8 @@ function ProcessVideo(){
 	Dialog.addCheckbox("Crop movie?", true);
 	Dialog.addCheckbox("Trim movie time?", true);
 	Dialog.addRadioButtonGroup("New fps (only if \"Reduce frames per second rate\" is ticked): ", newArray("6", "12", "24"), 1, 3, "12");
-	Dialog.addMessage("The original fps is " + originalFPS + ". Values choosen above it below will be disregarded.");
+	if(originalFPS > 24)
+		Dialog.addMessage("The original fps is " + originalFPS + ". Values choosen above it below will be disregarded.");
 	Dialog.addMessage("Please note that the trimming times HAS TO HAVE TWO DIGITS on the minutes and on the seconds.");
 	Dialog.addMessage("If you want to enter 4 minutes and 5 seconds enter: 04:05!");
 	Dialog.addString("Initial time of trim (in mm:ss format)", "00:00");
