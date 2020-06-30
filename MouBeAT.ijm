@@ -73,7 +73,7 @@ macro "Mouse Behavioral Analysis Menu Tool - C000C111D98C111D88C111D89C111D86D99
  		
  }
  
- /*Batch mode for processing AVI files that Fiji can´t open into AVI files that it can open
+ /*Batch mode for processing AVI files that Fiji canï¿½t open into AVI files that it can open
  opening then and saving them as tif files. this requires space and time as each frame becomes a
  tiff image so a 100Mb AVi file turns into a 3.5Gb Tiff stack
  It requires FFMPEG.EXE in the toolset folder
@@ -141,22 +141,30 @@ macro "Mouse Behavioral Analysis Menu Tool - C000C111D98C111D88C111D89C111D86D99
 	
 }
  
- /*Convert AVI file that Fiji can´t open into AVI files that it can open
+ /*Convert AVI file that Fiji canï¿½t open into AVI files that it can open
  opening then and saving it as tif files. This requires space and time as each frame becomes a
- tiff image so a 100Mb AVi file turns into a 3.5Gb Tiff stack
+ tiff image so a 10Mb AVi file turns into a 3.5Gb Tiff stack
  It requires FFMPEG.EXE in the toolset folder
  */
 function ProcessVideo(){
 	
 	
+	os = getInfo("os.name");
+	
+	if(startsWith(os, "Windows")){
+		ffmpegName = "ffmpeg.exe";	
+	}
+	else{
+		ffmpegName = "ffmpeg.app";
+	}
+
 	//Get the ffmpeg.exe path and check if file is present
-	pathFFmpeg = getDirectory("macros") + File.separator + "toolsets" + File.separator + "ffmpeg.exe";
+	pathFFmpeg = getDirectory("macros") + File.separator + "toolsets" + File.separator + ffmpegName;
 	if(!File.exists(pathFFmpeg)){
 		//Explain the needs of the function
-		showMessage("AVI processing tool","<html>"+"<font size=2><center>This step requires <br>"+"<font size=+2><center>ffmpeg.exe<br>"+"<font size=2><center>in the directory of ImageJ/macros/toolset!<br>" + "<font size=2><center>If you do not have ffmpeg installed please download it at<br>" + "<font size=2><font color=blue>https://ffmpeg.org/download.html<br><br>"+"<font size=2><font color=black> Also note that this macro does not support <b>SPACES</b> in the files/directories names!<br>");
+		showMessage("AVI processing tool","<html>"+"<font size=2><center>This step requires <br>"+"<font size=+2><center>ffmpeg<br>"+"<font size=2><center>in the directory of ImageJ/macros/toolset!<br>" + "<font size=2><center>If you do not have ffmpeg installed please download it at<br>" + "<font size=2><font color=blue>https://ffmpeg.org/download.html<br><br>"+"<font size=2><font color=black> Also note that this macro does not support <b>SPACES</b> in the files/directories names!<br>");
 		exit(); 
 	}
-		
 	
 	//Get target file and check if converted already exists and asks to delete it
 	path = File.openDialog("Select the movie file to convert.");
@@ -165,19 +173,208 @@ function ProcessVideo(){
 		File.delete(path + ".converted.avi");		
 	}
 	
-	
-	//Make string to run ffmepg command and run it on system dependent manner
-	string = pathFFmpeg + " -loglevel quiet -i "+ path +" -f avi -vcodec mjpeg "+ path + ".converted.avi && echo off";
+	//get metadata output from video with ffmpeg into a txt file
+	str = path + ".temp_output.txt";
+	if(File.exists(str)){
+		File.delete(str);		
+	}
 
-	os = getInfo("os.name");
-	
+	//run ffmpeg to get data from movie file
+	stringGetMetaData = pathFFmpeg + " -hide_banner -i "+ path +" -map 0:v:0 -c copy -f null - 2> "+ str;
 	if(startsWith(os, "Windows")){
-		exec("cmd /c "+ string);
+		exec("cmd /c "+ stringGetMetaData);	
+	}
+	else{
+		exec("sh -c "+ stringGetMetaData);
+	}
+
+
+	//get from the txt info file the duration and number of frames of the movie
+	//after delete the file
+	filestring = File.openAsString(str);
+	rows = split(filestring, "\n");
+	streamFlag = true;
+	originalFPS = 0;
+	for(i = 1; i < rows.length - 1; i++){
+		if(startsWith(rows[i], "  Duration: ")){
+			columns = split(rows[i], " :.,");
+			durationH = parseInt(columns[1]);
+			durationM = parseInt(columns[2]);
+			durationS = parseInt(columns[3]);
+			//print(durationH + ":"+ durationM + ":" + durationS+"\n");
+		}else if(startsWith(rows[i], "    Stream") && streamFlag){
+			columns = split(rows[i], " :,");
+			streamFlag = false;
+			for(i = 0; i < columns.length;i++){
+				if(columns[i] == "fps"){
+					originalFPS = parseInt(columns[i-1]);
+					break;
+				}
+			}	
+		}else if(startsWith(rows[i], "frame=")){
+			columns = split(rows[i], " =");
+			frameCount = parseInt(columns[1]);
+			//print(frameCount);
+			break;
+		}
 		
 	}
-	else
-		exec("sh -c " + string);
+	File.delete(str);
+
+	//get a tif sample to determine final size of converted tiff stack
+	strTiff= path + ".temp_output.tiff";
+	if(File.exists(strTiff)){
+		File.delete(strTiff);
+	}
+
+	if(durationM == 0){
+		ss = "00:00:"+IJ.pad(round(durationS/2),2);
+	} else
+		ss = "00:"+IJ.pad(round(durationM/2),2)+":00";
 	
+	stringGetframe = pathFFmpeg + " -ss "+ss+" -i "+ path + " -pix_fmt gray -compression_algo lzw "+ strTiff;
+
+	if(startsWith(os, "Windows")){
+		exec("cmd /c "+ stringGetframe);	
+	}
+	else{
+		exec("sh -c "+ stringGetframe);
+	}
+
+	setBatchMode("true");
+	open(strTiff);
+	h = getHeight();
+	w = getWidth();
+
+	close();
+	setBatchMode(false);
+
+	sizeGb = round((h*w*frameCount)/(1024 * 1024 * 1024));
+	//print(sizeGb);
+		
+	scaleNN = 0;
+	stringFPS = "";
+	stringScale = "";
+	stringTrimStart = "";
+	stringTrimEnd = "";
+	fpsNN = frameCount;
+	
+	//get options to reducie movie size
+	Dialog.create("Reduce movie vile options");
+	Dialog.addMessage("The expected file size of a tiff stack is "+sizeGb+"Gb! Please consider reducing its size!");
+	Dialog.addMessage("The total number of frames is " + frameCount + ". Reducing it, is the most effective at reducing output size!");
+	Dialog.addCheckbox("Reduce frames per second rate", true);
+	Dialog.addCheckbox("Scale down?", true);
+	Dialog.addCheckbox("Crop movie?", true);
+	Dialog.addCheckbox("Trim movie time?", true);
+	Dialog.addRadioButtonGroup("New fps (only if \"Reduce frames per second rate\" is ticked): ", newArray("6", "12", "24"), 1, 3, "12");
+	Dialog.addMessage("The original fps is " + originalFPS + ". Values choosen above it below will be disregarded.");
+	Dialog.addMessage("Please note that the trimming times HAS TO HAVE TWO DIGITS on the minutes and on the seconds.");
+	Dialog.addMessage("If you want to enter 4 minutes and 5 seconds enter: 04:05!");
+	Dialog.addString("Initial time of trim (in mm:ss format)", "00:00");
+	Dialog.addString("Final time of trim(in mm:ss format)", IJ.pad(durationM,2) + ":" + IJ.pad(durationS,2));
+	Dialog.show();
+
+	flagFPS = Dialog.getCheckbox();
+	fpsNN = Dialog.getRadioButton();
+	if(fpsNN > originalFPS)
+		fpsNN = originalFPS;
+	flagScale = Dialog.getCheckbox();
+	flagCrop = Dialog.getCheckbox();
+	flagTrim = Dialog.getCheckbox();
+	trimStart = Dialog.getString();
+	trimEnd = Dialog.getString();
+
+	//prossess scale down on movie
+	if(flagScale){
+		strTiff1024 = path + ".temp_output_1024.tiff";
+		strTiff512 = path + ".temp_output_512.tiff";
+		
+		//Delete output files of scale down tiff if they exist
+		if(File.exists(strTiff1024)){
+			File.delete(strTiff1024);
+		}
+
+		if(File.exists(strTiff512)){
+			File.delete(strTiff512);
+		}
+
+		//Run ffmepg to get 2 tifs of 1024 and 512 scales from the middle of the movie
+		stringGetframe1024 = pathFFmpeg + " -ss "+ss+" -i "+ path + " -vf scale=1024:ih*1024/iw -pix_fmt gray -compression_algo lzw "+ strTiff1024;
+		stringGetframe512 = pathFFmpeg + " -ss "+ss+" -i "+ path + " -vf scale=512:ih*512/iw -pix_fmt gray -compression_algo lzw "+ strTiff512;
+		if(startsWith(os, "Windows")){
+			exec("cmd /c "+ stringGetframe1024);	
+			exec("cmd /c "+ stringGetframe512);
+		}
+		else{
+			exec("sh -c "+ stringGetframe1024);
+			exec("cmd -c "+ stringGetframe512);
+		}
+		
+		open(strTiff1024);
+		rename("Example of movie frame at 1024 pixel scale");
+		open(strTiff512);
+		rename("Example of movie frame at 512 pixel scale");
+
+		Dialog.createNonBlocking("Select new scale for the new movie!");
+		Dialog.addRadioButtonGroup("New scale of movie:", newArray("512", "1024"), 1, 2, "1024");
+		Dialog.show();
+
+		scaleNN = parseInt(Dialog.getRadioButton());
+		run("Close All");
+	}
+
+	//Crop proccess
+	if(flagCrop){
+		if(scaleNN == 1024)
+			open(strTiff1024);
+		else if(scaleNN == 512)
+			open(strTiff512);
+		else 
+			open(strTiff);
+	
+	setTool(0);
+	waitForUser("Please draw a rectangle around the area of interest in the image.");
+	getSelectionBounds(x, y, w, h);
+	close();
+		
+	}
+
+	//string processing for ffmpeg
+	if(flagFPS)
+		stringFPS = " -r " + fpsNN; 
+	
+	if(flagScale){
+		stringScale = " -vf scale="+scaleNN+":ih*"+scaleNN+"/iw";
+		if(flagCrop)
+			stringScale = stringScale + ",crop="+w+":"+h+":"+x+":"+y;
+	}else if(flagCrop){
+		stringScale = stringScale + " -vf crop="+w+":"+h+":"+x+":"+y;
+	}
+
+	File.delete(strTiff1024);
+	File.delete(strTiff512);
+	File.delete(strTiff);
+	if(flagTrim){
+		stringTrimS = "-ss 00:" + trimStart;
+		stringTrimE = " -to 00:" + trimEnd;
+	}
+		
+
+	//string to run ffmepg and convert the movie file to an avi that fiji can open
+	string = pathFFmpeg + " -loglevel quiet " + stringTrimS + " -i " + path + stringTrimE + stringScale + " -f avi -vcodec mjpeg "+ stringFPS + " "+ path + ".converted.avi && echo off";
+	//print(string);
+
+	showStatus("Converting video, please be patient!");	
+	if(startsWith(os, "Windows")){
+			exec("cmd /c "+ string);			
+	}
+	else{
+		exec("sh -c "+ string);
+	}	
+
+	
+
 	//check the memory available to ImageJ and decide to open in virtual or not
 	if(parseInt(IJ.maxMemory()) >= 4194304000)					//Memory in bytes!!
 		run("AVI...", "open=" + path + ".converted.avi convert");
@@ -189,28 +386,36 @@ function ProcessVideo(){
 		
 	id = getImageID;
 	name = getTitle();
-	
-	//If needed remove slices from the beginning and the end
-	//Trim stack down if necessary
-	waitForUser("Please have a look at the stack to see if you want to trim it down. To select 1st frame press OK.");
-	first = getSliceNumber();
-	waitForUser("And now select the last frame and press OK.");
-	last = getSliceNumber();
+
 	
 	//Get directory to save image to 
 	dir = getDirectory("Choose Destination for image.");
+
 	
-	setBatchMode("hide");
-	if(first > 1)
-		run("Slice Remover", "first=1 last="+first+" increment=1");
+	//If needed remove slices from the beginning and the end
+	//Trim stack down if necessary
+	if(!flagTrim){
+		Dialog.createNonBlocking("Trim movie down");
+		Dialog.addNumber("First slice of new movie", 1);
+		Dialog.addNumber("Last slice of new movie", nSlices);
+		Dialog.show();
+		first = Dialog.getNumber();
+		last = Dialog.getNumber();
+		setBatchMode("hide");
+		if(first > 1)
+			run("Slice Remover", "first=1 last="+first+" increment=1");
 	
-	if(last < nSlices)
-		run("Slice Remover", "first="+last+" last="+nSlices+" increment=1");
+		if(last < nSlices)
+			run("Slice Remover", "first="+last+" last="+nSlices+" increment=1");
+		//Show
+		setBatchMode("show");
+	}
 	
-	//Save tiff stack		
+	//Save tiff stack	
+	setMetadata("Info", "Frame rate: " + fpsNN);
 	saveAs("tiff", dir+name +".converted.tif");
-	//Show and close
-	setBatchMode("show");
+	
+	
 	close();
 	
 	exit("Processing finished!");
@@ -2041,7 +2246,7 @@ function sortRegions(xp, yp, xc, yc, headC, dir, imTitle, n){
 	dist = calculateDistance(centerX, centerY, xc, yc);
 	
 	/*check if the mouse is close to the regions
-	If the center of mouse is further away then 6 radius donºt bother*/
+	If the center of mouse is further away then 6 radius donï¿½t bother*/
 	if(dist < radius * 6){
 		/*Calculate the distance of the head to the regions*/
 		dist = calculateDistance(centerX,centerY,xp[headC],yp[headC]);
@@ -3813,7 +4018,7 @@ function removeDarkR(imTitle){
 	temp = newArray(2);
 	run("Select None");
 	setBatchMode("show");
-	showMessage("Stack shading Processing","<html>"+"<font size=2><center>Please select the starting and end point<br>"+"<font size=2><center>of the stack to create a shading correction.<br>" + "<font size=2><center>Ideally you want frames where the mouse isn´t present yet (minimum 50 frames)<br>" + "<font size=2><center>If you have to use frames with mice in use as many as possible (>1000)<br><br>");
+	showMessage("Stack shading Processing","<html>"+"<font size=2><center>Please select the starting and end point<br>"+"<font size=2><center>of the stack to create a shading correction.<br>" + "<font size=2><center>Ideally you want frames where the mouse isnï¿½t present yet (minimum 50 frames)<br>" + "<font size=2><center>If you have to use frames with mice in use as many as possible (>1000)<br><br>");
 	waitForUser("Please select the inital frame to start the averaging");
 	temp[0] = getSliceNumber();
 	waitForUser("Please select the final frame to start the averaging");
@@ -3997,7 +4202,7 @@ function fearRedo(temp, option){
 		if(File.exists(dir + imName + "ROIs.zip"))
 			roiManager("Open", dir + imName + "ROIs.zip");
 		else
-			exit("Roi´s file appears to not exist!");
+			exit("Roiï¿½s file appears to not exist!");
 		if(option == 1){
 			//Get data of the dectetions
 			freezeCheck(fps, dir, imName, staggerS);
@@ -4089,7 +4294,7 @@ function tyRedo(temp, option){
 		if(File.exists(dir + imName + "ROIs.zip"))
 			roiManager("Open", dir + imName + "ROIs.zip");
 		else
-			exit("Roi´s file appears to not exist!");
+			exit("Roiï¿½s file appears to not exist!");
 		if(option == 1){
 			//Get data of the dectetions
 			getParametersTY(fps, dir, imName, staggerS);
@@ -4185,7 +4390,7 @@ function objectsRedo(temp, option){
 		if(File.exists(dir + imName + "ROIs.zip"))
 			roiManager("Open", dir + imName + "ROIs.zip");
 		else
-			exit("Roi´s file appears to not exist!");
+			exit("Roiï¿½s file appears to not exist!");
 		if(option == 1){
 			//Get data of the dectetions
 			getParametersRT(fps, dir, imName, nRegions, totalslices);
@@ -4261,7 +4466,7 @@ function swimRedo(temp, option){
 		if(File.exists(dir + imName + "ROIs.zip"))
 			roiManager("Open", dir + imName + "ROIs.zip");
 		else
-			exit("Roi´s file appears to not exist!");
+			exit("Roiï¿½s file appears to not exist!");
 		if(option == 1){
 			//Get data of the dectetions
 			getParametersSM(fps,dir, imName, diameter, staggerS);
@@ -4356,7 +4561,7 @@ function crossRedo(temp, option){
 		if(File.exists(dir + imName + "ROIs.zip"))
 			roiManager("Open", dir + imName + "ROIs.zip");
 		else
-			exit("Roi´s file appears to not exist!");
+			exit("Roiï¿½s file appears to not exist!");
 		if(option == 1){
 			//Get data of the dectetions
 			toUnscaled(armsL);
@@ -4443,7 +4648,7 @@ function cubeRedo(temp, option){
 		if(File.exists(dir + imName + "ROIs.zip"))
 			roiManager("Open", dir + imName + "ROIs.zip");
 		else
-			exit("Roi´s file appears to not exist!");
+			exit("Roiï¿½s file appears to not exist!");
 		if(option == 1){
 			//Get data of the dectetions
 			getParameters(fps, dir, imName, totalslices);
@@ -4773,7 +4978,7 @@ function movingAverage(window, array){
 }
 
 /*Get the frame rate of the image from the Info data
-If it doesn´t find it it asks for the user to input it or just use the 25fps one*/
+If it doesnï¿½t find it it asks for the user to input it or just use the 25fps one*/
 function getFrameRate(){
 	info = getImageInfo();
 	index1 = indexOf(info, "Frame rate: ");
