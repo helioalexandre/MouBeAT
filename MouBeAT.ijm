@@ -191,10 +191,12 @@ function ProcessVideo(){
 
 	//get from the txt info file the duration and number of frames of the movie
 	//after delete the file
+	//not using break and letting loop go through all the lines to find the highest frame count
 	filestring = File.openAsString(str);
 	rows = split(filestring, "\n");
 	streamFlag = true;
 	originalFPS = 0;
+	frameCount = 0;
 	for(i = 1; i < rows.length - 1; i++){
 		if(startsWith(rows[i], "  Duration: ")){
 			columns = split(rows[i], " :.,");
@@ -212,9 +214,9 @@ function ProcessVideo(){
 				
 		}else if(startsWith(rows[i], "frame=")){
 			columns = split(rows[i], " =");
-			frameCount = parseInt(columns[1]);
+			if(parseInt(columns[1]) > frameCount)
+				frameCount = parseInt(columns[1]);
 			//print(frameCount);
-			break;
 		}
 		
 	}
@@ -255,8 +257,8 @@ function ProcessVideo(){
 	scaleNN = 0;
 	stringFPS = "";
 	stringScale = "";
-	stringTrimStart = "";
-	stringTrimEnd = "";
+	stringTrimS = "";
+	stringTrimE = "";
 	fpsNN = frameCount;
 	
 	//get options to reducie movie size
@@ -268,7 +270,7 @@ function ProcessVideo(){
 	Dialog.addCheckbox("Crop movie?", true);
 	Dialog.addCheckbox("Trim movie time?", true);
 	Dialog.addRadioButtonGroup("New fps (only if \"Reduce frames per second rate\" is ticked): ", newArray("6", "12", "24"), 1, 3, "12");
-	if(originalFPS > 24)
+	if(originalFPS < 24 && originalFPS > 6)
 		Dialog.addMessage("The original fps is " + originalFPS + ". Values choosen above it below will be disregarded.");
 	Dialog.addMessage("Please note that the trimming times HAS TO HAVE TWO DIGITS on the minutes and on the seconds.");
 	Dialog.addMessage("If you want to enter 4 minutes and 5 seconds enter: 04:05!");
@@ -393,27 +395,8 @@ function ProcessVideo(){
 	dir = getDirectory("Choose Destination for image.");
 
 	
-	//If needed remove slices from the beginning and the end
-	//Trim stack down if necessary
-	if(!flagTrim){
-		Dialog.createNonBlocking("Trim movie down");
-		Dialog.addNumber("First slice of new movie", 1);
-		Dialog.addNumber("Last slice of new movie", nSlices);
-		Dialog.show();
-		first = Dialog.getNumber();
-		last = Dialog.getNumber();
-		setBatchMode("hide");
-		if(first > 1)
-			run("Slice Remover", "first=1 last="+first+" increment=1");
-	
-		if(last < nSlices)
-			run("Slice Remover", "first="+last+" last="+nSlices+" increment=1");
-		//Show
-		setBatchMode("show");
-	}
-	
 	//Save tiff stack	
-	setMetadata("Info", "Frame rate: " + fpsNN);
+	setMetadata("Info", "Frame rate: " + fpsNN + " fps");
 	saveAs("tiff", dir+name +".converted.tif");
 	
 	
