@@ -3076,30 +3076,6 @@ function GPreferences(){
 		call("ij.Prefs.set", "MouBeAT_Prefs.gen.units", unitsL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.gen.gauval", gauValL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.gen.dispVal", dispValL);
-		//Cube maze
-		//call("ij.Prefs.set", "MouBeAT_Prefs.cube.soli", solidityL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.cube.width", wCubeL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.cube.marea", mCubeAreaL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.cube.headFraction", headCubeFractionL);
-		//Elevated maze
-		call("ij.Prefs.set", "MouBeAT_Prefs.elev.width", wElevatedL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.elev.length", lElevatedL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.elev.marea", mElevatedAreaL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.elev.smooth", sElevatedL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", headElevatedFractionL);
-		//Swimming maze
-		call("ij.Prefs.set", "MouBeAT_Prefs.swim.dia", dSwimmingL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.swim.marea", mSwimmingAreaL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.swim.poolWD", poolWDL);
-		//T/Y maze
-		call("ij.Prefs.set", "MouBeAT_Prefs.ty.width", wTYL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.ty.marea", mTYAreaL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.ty.smooth", sTYL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", headTYFractionL);
-		//Freeze maze
-		call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", mFreezeAreaL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", sFreezeL);
-		call("ij.Prefs.set", "MouBeAT_Prefs.fre.binInt", tFreezeL);
 		
 	}else{
 		//General
