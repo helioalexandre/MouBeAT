@@ -143,7 +143,7 @@ macro "Mouse Behavioral Analysis Menu Tool - C000C111D98C111D88C111D89C111D86D99
  
  /*Convert AVI file that Fiji can�t open into AVI files that it can open
  opening then and saving it as tif files. This requires space and time as each frame becomes a
- tiff image so a 100Mb AVi file turns into a 3.5Gb Tiff stack
+ tiff image so a 10Mb AVi file turns into a 3.5Gb Tiff stack
  It requires FFMPEG.EXE in the toolset folder
  */
 function ProcessVideo(){
@@ -153,7 +153,8 @@ function ProcessVideo(){
 	
 	if(startsWith(os, "Windows")){
 		ffmpegName = "ffmpeg.exe";	
-	}else{
+	}
+	else{
 		ffmpegName = "ffmpeg.app";
 	}
 
@@ -168,7 +169,7 @@ function ProcessVideo(){
 	//Get target file and check if converted already exists and asks to delete it
 	path = File.openDialog("Select the movie file to convert.");
 	if(File.exists(path + ".converted.avi")){
-		//showMessageWithCancel(delFile);
+		showMessageWithCancel(delFile);
 		File.delete(path + ".converted.avi");		
 	}
 	
@@ -191,33 +192,73 @@ function ProcessVideo(){
 	//get from the txt info file the duration and number of frames of the movie
 	//after delete the file
 	filestring = File.openAsString(str);
+	//print(filestring);
 	rows = split(filestring, "\n");
+	streamFlag = true;
+	originalFPS = 0;
+	frameCount=0;
+	//Go line by line and separate each line by spaces, double dot, dot, comma, equal
 	for(i = 1; i < rows.length - 1; i++){
-		if(startsWith(rows[i], "  Duration: ")){
-			columns = split(rows[i], ",");
-			durationH = parseInt(substring(columns[0], 12, 14));
-			durationM = parseInt(substring(columns[0], 15, 17));
-			durationS = parseInt(substring(columns[0], 18, 20));
+		columns = split(rows[i], " :.,=");
+		//if the line starts with "duration" take the total length of the movie
+		if(columns[0] == "Duration"){
+			durationH = parseInt(columns[1]);
+			durationM = parseInt(columns[2]);
+			durationS = parseInt(columns[3]);
 			//print(durationH + ":"+ durationM + ":" + durationS+"\n");
-		}else if(startsWith(rows[i], "frame=")){
-			columns = split(rows[i], " ");
-			frameCount = parseInt(substring(columns[0], 6));
+		//if the line starts with Stream look for the fps key and get it
+		//if the line does not have fps move on to next one
+		//if the line has fps set flag to avoid doing this again
+		}else if(columns[0] =="Stream" && streamFlag){
+			j=0;
+			while( j < columns.length-1 && columns[j] != "fps"){
+				j++;
+			}
+			if(j == columns.length-1){
+				//go around again
+			}else{
+				originalFPS = parseInt(columns[j-1]);
+				streamFlag = false;
+			}
+		//if the line starts with frame get the totalcount of frames					
+		}else if(startsWith(rows[i], "frame")){
+			//columns = split(rows[i], " =");
+			frameCount = parseInt(columns[1]);
 			//print(frameCount);
 			break;
 		}
 		
 	}
 	File.delete(str);
+	//If original FPS not set get it from here
+	if(originalFPS == 0){
+		print(filestring);
+		waitForUser("FPS not set...", "Please look into the log file open and locate the fps count to insert it in the next dialog.");
+		getNumber("Ok please insert the FPS value here", 24);
+		selectWindow("Log");
+         run("Close" );
+	}
+	
+	//if framCount not set calculate it aproximately
+	if(frameCount == 0 && originalFPS !=0){
+		frameCount = originalFPS * durationS;
+		frameCount += (durationM * 60)*originalFPS;
+		frameCount += (durationH * 3600)*originalFPS;
+	}
+	
+
+	
 
 	//get a tif sample to determine final size of converted tiff stack
 	strTiff= path + ".temp_output.tiff";
 	if(File.exists(strTiff)){
 		File.delete(strTiff);
 	}
-	if(round(durationM/2) > 9)
-		ss = "00:"+round(durationM/2)+":00";
-	else 
-		ss = "00:0"+round(durationM/2)+":00";
+
+	if(durationM == 0){
+		ss = "00:00:"+IJ.pad(round(durationS/2),2);
+	} else
+		ss = "00:"+IJ.pad(round(durationM/2),2)+":00";
 	
 	stringGetframe = pathFFmpeg + " -ss "+ss+" -i "+ path + " -pix_fmt gray -compression_algo lzw "+ strTiff;
 
@@ -236,101 +277,124 @@ function ProcessVideo(){
 	close();
 	setBatchMode(false);
 
-	//File.delete(strTiff);
-
-	sizeGb = (h*w*frameCount)/(1024 * 1024 * 1024);
+	sizeGb = round((h*w*frameCount)/(1024 * 1024 * 1024));
 	//print(sizeGb);
 		
 	scaleNN = 0;
 	stringFPS = "";
-	stringScale ="";
+	stringScale = "";
+	stringTrimStart = "";
+	stringTrimEnd = "";
 	fpsNN = frameCount;
-	if(sizeGb > 4){
-		//get options to reducie movie size
-		Dialog.create("Reduce movie vile options");
-		Dialog.addMessage("The expected file size of a tiff stack is "+sizeGb+"Gb! Please consider reducing its size!");
-		Dialog.addMessage("The number of frames per second is " + frameCount + ". Reducing it is the most effective at reducing output size!");
-		Dialog.addCheckbox("Reduce frames per second rate", true);
-		Dialog.addRadioButtonGroup("New fps (only has effect if above checkbox is ticked): ", newArray("6", "12", "24"), 1, 3, "12");
-		Dialog.addCheckbox("Scale down?", true);
-		Dialog.addCheckbox("Crop movie?", true);
-		Dialog.show();
 	
-		flagFPS = Dialog.getCheckbox();
-		fpsNN = Dialog.getRadioButton();
-		flagScale = Dialog.getCheckbox();
-		flagCrop = Dialog.getCheckbox();
+	//get options to reducie movie size
+	Dialog.create("Reduce movie vile options");
+	Dialog.addMessage("The expected file size of a tiff stack is "+sizeGb+"Gb! Please consider reducing its size!");
+	Dialog.addMessage("The total number of frames is " + frameCount + ". Reducing it, is the most effective at reducing output size!");
+	Dialog.addCheckbox("Reduce frames per second rate", true);
+	Dialog.addCheckbox("Scale down?", true);
+	Dialog.addCheckbox("Crop movie?", true);
+	Dialog.addCheckbox("Trim movie time?", true);
+	Dialog.addRadioButtonGroup("New fps (only if \"Reduce frames per second rate\" is ticked): ", newArray("6", "12", "24"), 1, 3, "12");
+	//if(originalFPS > 24)
+		Dialog.addMessage("The original fps is " + originalFPS + ". Values choosen above it will be disregarded.");
+	Dialog.addMessage("Please note that the trimming times HAS TO HAVE TWO DIGITS on the minutes and on the seconds.");
+	Dialog.addMessage("If you want to enter 4 minutes and 5 seconds enter: 04:05!");
+	Dialog.addString("Initial time of trim (in mm:ss format)", "00:00");
+	Dialog.addString("Final time of trim(in mm:ss format)", IJ.pad(durationM,2) + ":" + IJ.pad(durationS,2));
+	Dialog.show();
 
-		if(flagScale){
-			strTiff1024 = path + ".temp_output_1024.tiff";
-			strTiff512 = path + ".temp_output_512.tiff";
-			if(File.exists(strTiff1024)){
-				File.delete(strTiff1024);
-			}
+	flagFPS = Dialog.getCheckbox();
+	fpsNN = Dialog.getRadioButton();
+	if(fpsNN > originalFPS)
+		fpsNN = originalFPS;
+	flagScale = Dialog.getCheckbox();
+	flagCrop = Dialog.getCheckbox();
+	flagTrim = Dialog.getCheckbox();
+	trimStart = Dialog.getString();
+	trimEnd = Dialog.getString();
 
-			if(File.exists(strTiff512)){
-				File.delete(strTiff512);
-			}
-			
-			stringGetframe1024 = pathFFmpeg + " -ss "+ss+" -i "+ path + " -vf scale=1024:ih*1024/iw -pix_fmt gray -compression_algo lzw "+ strTiff1024;
-			stringGetframe512 = pathFFmpeg + " -ss "+ss+" -i "+ path + " -vf scale=512:ih*512/iw -pix_fmt gray -compression_algo lzw "+ strTiff512;
-			if(startsWith(os, "Windows")){
-				exec("cmd /c "+ stringGetframe1024);	
-				exec("cmd /c "+ stringGetframe512);
-			}
-			else{
-				exec("sh -c "+ stringGetframe1024);
-				exec("cmd -c "+ stringGetframe512);
-			}
-			
-			open(strTiff1024);
-			rename("Example of movie frame at 1024 pixel scale");
-			open(strTiff512);
-			rename("Example of movie frame at 512 pixel scale");
-
-			Dialog.createNonBlocking("Select new scale for the new movie!");
-			Dialog.addRadioButtonGroup("New scale of movie:", newArray("512", "1024"), 1, 2, "1024");
-			Dialog.show();
-
-			scaleNN = parseInt(Dialog.getRadioButton());
-			run("Close All");
+	//prossess scale down on movie
+	if(flagScale){
+		strTiff1024 = path + ".temp_output_1024.tiff";
+		strTiff512 = path + ".temp_output_512.tiff";
+		
+		//Delete output files of scale down tiff if they exist
+		if(File.exists(strTiff1024)){
+			File.delete(strTiff1024);
 		}
 
-		if(flagCrop){
-			if(scaleNN == 1024)
-				open(strTiff1024);
-			else if(scaleNN == 512)
-				open(strTiff512);
-			else 
-				open(strTiff);
-		
-		setTool(0);
-		waitForUser("Please draw a rectangle around the area of interest in the image.");
-		getSelectionBounds(x, y, w, h);
-		close();
-			
+		if(File.exists(strTiff512)){
+			File.delete(strTiff512);
 		}
 
-		
-		if(flagFPS)
-			stringFPS = " -r " + fpsNN; 
-		
-		if(flagScale){
-			stringScale = " -vf scale="+scaleNN+":ih*"+scaleNN+"/iw";
-			if(flagCrop)
-				stringScale = stringScale + ",crop="+w+":"+h+":"+x+":"+y;
-		}else if(flagCrop){
-			stringScale = stringScale + " -vf crop="+w+":"+h+":"+x+":"+y;
+		//Run ffmepg to get 2 tifs of 1024 and 512 scales from the middle of the movie
+		stringGetframe1024 = pathFFmpeg + " -ss "+ss+" -i "+ path + " -vf scale=1024:ih*1024/iw -pix_fmt gray -compression_algo lzw "+ strTiff1024;
+		stringGetframe512 = pathFFmpeg + " -ss "+ss+" -i "+ path + " -vf scale=512:ih*512/iw -pix_fmt gray -compression_algo lzw "+ strTiff512;
+		if(startsWith(os, "Windows")){
+			exec("cmd /c "+ stringGetframe1024);	
+			exec("cmd /c "+ stringGetframe512);
 		}
+		else{
+			exec("sh -c "+ stringGetframe1024);
+			exec("cmd -c "+ stringGetframe512);
+		}
+		
+		open(strTiff1024);
+		rename("Example of movie frame at 1024 pixel scale");
+		open(strTiff512);
+		rename("Example of movie frame at 512 pixel scale");
 
-		File.delete(strTiff1024);
-		File.delete(strTiff512);
-		File.delete(strTiff);
+		Dialog.createNonBlocking("Select new scale for the new movie!");
+		Dialog.addRadioButtonGroup("New scale of movie:", newArray("512", "1024"), 1, 2, "1024");
+		Dialog.show();
+
+		scaleNN = parseInt(Dialog.getRadioButton());
+		run("Close All");
 	}
 
-	//string to run ffmepg and convert the movie file to an avi that fiji can open
-	string = pathFFmpeg + " -loglevel quiet -i "+ path + stringScale + " -f avi -vcodec mjpeg "+ stringFPS + " "+ path + ".converted.avi && echo off";
+	//Crop proccess
+	if(flagCrop){
+		if(scaleNN == 1024)
+			open(strTiff1024);
+		else if(scaleNN == 512)
+			open(strTiff512);
+		else 
+			open(strTiff);
 	
+	setTool(0);
+	waitForUser("Please draw a rectangle around the area of interest in the image.");
+	getSelectionBounds(x, y, w, h);
+	close();
+		
+	}
+
+	//string processing for ffmpeg
+	if(flagFPS)
+		stringFPS = " -r " + fpsNN; 
+	
+	if(flagScale){
+		stringScale = " -vf scale="+scaleNN+":ih*"+scaleNN+"/iw";
+		if(flagCrop)
+			stringScale = stringScale + ",crop="+w+":"+h+":"+x+":"+y;
+	}else if(flagCrop){
+		stringScale = stringScale + " -vf crop="+w+":"+h+":"+x+":"+y;
+	}
+
+	File.delete(strTiff1024);
+	File.delete(strTiff512);
+	File.delete(strTiff);
+	if(flagTrim){
+		stringTrimS = "-ss 00:" + trimStart;
+		stringTrimE = " -to 00:" + trimEnd;
+	}
+		
+
+	//string to run ffmepg and convert the movie file to an avi that fiji can open
+	string = pathFFmpeg + " -loglevel quiet " + stringTrimS + " -i " + path + stringTrimE + stringScale + " -f avi -vcodec mjpeg "+ stringFPS + " "+ path + ".converted.avi && echo off";
+	//print(string);
+
+	showStatus("Converting video, please be patient!");	
 	if(startsWith(os, "Windows")){
 			exec("cmd /c "+ string);			
 	}
@@ -338,7 +402,7 @@ function ProcessVideo(){
 		exec("sh -c "+ string);
 	}	
 
-	showStatus("Converting video, please be patient!");
+	
 
 	//check the memory available to ImageJ and decide to open in virtual or not
 	if(parseInt(IJ.maxMemory()) >= 4194304000)					//Memory in bytes!!
@@ -351,33 +415,36 @@ function ProcessVideo(){
 		
 	id = getImageID;
 	name = getTitle();
+
+	
+	//Get directory to save image to 
+	dir = getDirectory("Choose Destination for image.");
+
 	
 	//If needed remove slices from the beginning and the end
 	//Trim stack down if necessary
-
-	Dialog.createNonBlocking("Trim movie down");
-	Dialog.addNumber("First slice of new movie", 1);
-	Dialog.addNumber("Last slice of new movie", nSlices);
-	Dialog.show();
-
-	first = Dialog.getNumber();
-	last = Dialog.getNumber();
-
-	//Get directory to save image to 
-	dir = getDirectory("Choose Destination for image.");
+	if(!flagTrim){
+		Dialog.createNonBlocking("Trim movie down");
+		Dialog.addNumber("First slice of new movie", 1);
+		Dialog.addNumber("Last slice of new movie", nSlices);
+		Dialog.show();
+		first = Dialog.getNumber();
+		last = Dialog.getNumber();
+		setBatchMode("hide");
+		if(first > 1)
+			run("Slice Remover", "first=1 last="+first+" increment=1");
 	
-	setBatchMode("hide");
-	if(first > 1)
-		run("Slice Remover", "first=1 last="+first+" increment=1");
+		if(last < nSlices)
+			run("Slice Remover", "first="+last+" last="+nSlices+" increment=1");
+		//Show
+		setBatchMode("show");
+	}
 	
-	if(last < nSlices)
-		run("Slice Remover", "first="+last+" last="+nSlices+" increment=1");
-	
-	//Save tiff stack	
+	//Save tiff stack	
 	setMetadata("Info", "Frame rate: " + fpsNN);
 	saveAs("tiff", dir+name +".converted.tif");
-	//Show and close
-	setBatchMode("show");
+	
+	
 	close();
 	
 	exit("Processing finished!");
@@ -2281,16 +2348,11 @@ function MiceYTTracker(){
 
 	//Draw a triangle for the user to adujst to the triangle of the TY
 	getDimensions(width, height, channels, slices, frames);
-	
-	//make sure there is only 3 points in the triangle
-	do{
 	makePolygon(width/2, height/2,width/2 + 40, height/2,width/2 + 20, height/2+40);
 	waitForUser("Please adjust the vertices of the triangle to match the vertices of the arms");
 
 	//get the dimensions of the triangle in the center of the T/Y and print it to file
 	getSelectionCoordinates(px, py);
-	}while(px.length!=3)
-	
 	stringx = "";
 	stringy = "";
 	for(i = 0; i < px.length; i++){
@@ -2399,246 +2461,196 @@ dimensions of the triangle*/
 }
 
 
-	/*This function goes through the ROIs, creates and fills arrays with the
-	result of the ROI analysis and then prints them to 2 files with the individual
-	results and a summary of the results*/
-	function getParametersTY(fps, dir, imTitle, sStart){
-		//Determine the delay between ROIs
-		if(fps == fpsOri){
-			delay = 1/fps;
-		}else
-			delay = (1/fpsOri) * (100/fps);
+/*This function goes through the ROIs, creates and fills arrays with the
+result of the ROI analysis and then prints them to 2 files with the individual
+results and a summary of the results*/
+function getParametersTY(fps, dir, imTitle, sStart){
+	//Determine the delay between ROIs
+	if(fps == fpsOri){
+		delay = 1/fps;
+	}else
+		delay = (1/fpsOri) * (100/fps);
+
+	run("Set Measurements...", "area centroid redirect=None decimal=3");
 	
-		run("Set Measurements...", "area centroid redirect=None decimal=3");
-		
-		/*Create arrays to hold the individual parameters of each ROI*/
-		arrayX = newArray(roiManager("Count"));
-		arrayY = newArray(roiManager("Count"));
-		displacement = newArray(roiManager("Count"));
-		velocity = newArray(roiManager("Count"));
-		armsPosition = newArray(roiManager("Count"));
-		armsPositionA = newArray(roiManager("Count"));
-		slices = newArray(roiManager("Count"));
-		averDistance = 0;
-		armMiddleAngles = newArray(3);
-		armMiddleAnglesR = newArray(3);
-		armOrder = newArray(3);
-		midpointX= newArray(3);
-		midpointY = newArray(3);
-		
-		
-		//Get central box parameters
-		triangleX = getFileData(3, dir, imTitle, 5);
-		triangleY = getFileData(4, dir, imTitle, 5);
-		
-		//get midpoints triangles
-		for(i = triangleX.length-1, j = 0; i >= 0 ; i--, j++){
-			if(i == triangleX.length-1){
-				midpointX[j] = ((triangleX[i] + triangleX[0])/2);
-				midpointY[j] = ((triangleY[i] + triangleY[0])/2);
-			}
-			else{
-				midpointX[j] = ((triangleX[i] + triangleX[i+1])/2);
-				midpointY[j] = ((triangleY[i] + triangleY[i+1]))/2;
-			}
-		}
-		
-		makeSelection("polygon", midpointX, midpointY);
-		
+	/*Create arrays to hold the individual parameters of each ROI*/
+	arrayX = newArray(roiManager("Count"));
+	arrayY = newArray(roiManager("Count"));
+	displacement = newArray(roiManager("Count"));
+	velocity = newArray(roiManager("Count"));
+	armsPosition = newArray(roiManager("Count"));
+	armsPositionA = newArray(roiManager("Count"));
+	slices = newArray(roiManager("Count"));
+
+	
+	/*count and sum variables for the individual parameters*/
+	displa = 0; visit1 = 0; visit2=0; visit3 = 0; 
+	time1 = 0; time2 = 0; time3=0;
+	order1 = 0; order2 = 0; order3=0;
+	ordem = "";
+	
+	roiManager("Deselect");
+	setBatchMode("hide");
+	/*Main loop to go trough all the ROIs and get the stats*/
+	for(i=0; i<roiManager("count");i++){
+		showProgress(i, roiManager("count"));
+		showStatus("Analysing detections...");
+		roiManager("Select", i);
+		//smooth a bit the selection to eliminate tails and small bits on walls
+		//keeping the head - due to problems in the ilumination
+		run("Enlarge...", "enlarge=-"+sTY+" pixel");
+		run("Enlarge...", "enlarge="+sTY+" pixel");
 		List.setMeasurements();
-		xcenterTriangle = List.getValue("X");
-		ycenterTriangle = List.getValue("Y");
-		toUnscaled(xcenterTriangle,ycenterTriangle);
+ 
+		//Center coordinates of mouse
+		arrayX[i] = List.getValue("X");
+		arrayY[i] = List.getValue("Y");
 		
-		for(i = 0; i < midpointX.length; i++){		
-			armMiddleAngles[i] = calculateAngleTY(xcenterTriangle,ycenterTriangle, midpointX[i],midpointY[i]);
-		}
-		
-		armOrder = Array.rankPositions(armMiddleAngles);
-		
-		
-		for(i = 0; i < armMiddleAngles.length; i++){
-			armMiddleAnglesR[i] = armMiddleAngles[i]*PI/180;
-		}
-		
-		
-		
-		for(i = 0; i < triangleX.length; i++){
-			averDistance = averDistance + calculateDistance(xcenterTriangle, ycenterTriangle, triangleX[i],triangleY[i]);
-		}
-		averDistance = averDistance/3;	
-		
-		
-		
-		/*count and sum variables for the individual parameters*/
-		displa = 0; visit1 = 0; visit2=0; visit3 = 0; 
-		time1 = 0; time2 = 0; time3=0;
-		order1 = 0; order2 = 0; order3=0;
-		ordem = "";
-		
-		
-		roiManager("Deselect");
-		setBatchMode("hide");
-		/*Main loop to go trough all the ROIs and get the stats*/
-		for(i=0; i<roiManager("count");i++){
-			showProgress(i, roiManager("count"));
-			showStatus("Analysing detections...");
-			roiManager("Select", i);
-			//smooth a bit the selection to eliminate tails and small bits on walls
-			//keeping the head - due to problems in the ilumination
-			run("Enlarge...", "enlarge=-"+sTY+" pixel");
-			run("Enlarge...", "enlarge="+sTY+" pixel");
-			List.setMeasurements();
-	 
-			//Center coordinates of mouse
-			arrayX[i] = List.getValue("X");
-			arrayY[i] = List.getValue("Y");
-			
-			
-			//armsPosition is an array which provides several properties to setup
-			//information. 
-			if(i==0)
-				armsPosition[i] = getDirectionTY(0, averDistance, xcenterTriangle, ycenterTriangle, armMiddleAngles, armOrder);
-			else
-				armsPosition[i] = getDirectionTY(armsPosition[i-1], averDistance, xcenterTriangle, ycenterTriangle, armMiddleAngles, armOrder);	
-						
-			slices[i] = getSliceNumber();
-	
-	
+
+		//armsPosition is an array which provides several properties to setup
+		//information. 
+		if(i==0)
+			armsPosition[i] = getDirectionTY(0);
+		else
+			armsPosition[i] = getDirectionTY(armsPosition[i-1]);	
 					
-			if(i==0){
-				displacement[i] = 0;
-				velocity[i] = 0;
-	
-			}else{
-				/*Displacement / Velocity */	
-				displacement[i] = calculateDistance(arrayX[i-1], arrayY[i-1], arrayX[i], arrayY[i]);
-				velocity[i] = displacement[i]/delay;
-				if(displacement[i] > dispVal)
-					displa = displa + displacement[i];
-	
-						
-			}
+		slices[i] = getSliceNumber();
+
+
 				
+		if(i==0){
+			displacement[i] = 0;
+			velocity[i] = 0;
+
+		}else{
+			/*Displacement / Velocity */	
+			displacement[i] = calculateDistance(arrayX[i-1], arrayY[i-1], arrayX[i], arrayY[i]);
+			velocity[i] = displacement[i]/delay;
+			if(displacement[i] > dispVal)
+				displa = displa + displacement[i];
+
+					
 		}
-	
-		r = 7; //window length
-		for(j = 0; j < armsPosition.length; j++){
-			count0 = 0; count1 = 0; count2=0; count3=0;
-			if(j < floor(r/2)){
-				m = 0;
-				temp = j + round(r/2);
-			}else if(j >= floor(r/2) && j < armsPosition.length - round(r/2)){
-				m = j;
-				temp = j + round(r/2);
-			}else if(j >= armsPosition.length - round(r/2)){
-				m = j - floor(r/2);
-				temp = armsPosition.length;
-			}
 			
-			for(; m < temp; m++){
-				if(armsPosition[m] == 0)
-					count0++;
-				else if(armsPosition[m] == 1)
-					count1++;
-				else if(armsPosition[m] == 2)
-					count2++;
-				else
-					count3++;
-			}
-			
-			
-			if(count0 >= count1 && count0 >= count2 && count0 >= count3)
-				armsPositionA[j]=0;
-			else if(count1 > count0 && count1 > count2 && count1 > count3)
-				armsPositionA[j]=1;
-			else if(count2 > count0 && count2 > count1 && count2 > count3)
-				armsPositionA[j]=2;
-			else 
-				armsPositionA[j]=3;		
-			
-			
-			
-		}
-		
-	
-		
-		/*Positions in the arms*/
-		ordem = toString(armsPositionA[0]);
-		
-		
-		//Setup positions counts and visit times
+	}
+
+	r = 7; //window length
+	for(j = 0; j < armsPosition.length; j++){
 		count0 = 0; count1 = 0; count2=0; count3=0;
-		anchor1 = floor(fps/3);
-		if(armsPosition[0] == 1) 
-			visit1++;
-		else if(armsPosition[0] == 2)
-			visit2++;
-		else if(armsPosition[0] == 3)
-			visit3++;
+		if(j < floor(r/2)){
+			m = 0;
+			temp = j + round(r/2);
+		}else if(j >= floor(r/2) && j < armsPosition.length - round(r/2)){
+			m = j;
+			temp = j + round(r/2);
+		}else if(j >= armsPosition.length - round(r/2)){
+			m = j - floor(r/2);
+			temp = armsPosition.length;
+		}
 		
-		for(i = 1; i < armsPositionA.length; i++){
-			if(anchor1 > i){
-				anchor = i;
-			}else{
-				anchor = anchor1;
-			}
-			if(armsPositionA[i]==1){
+		for(; m < temp; m++){
+			if(armsPosition[m] == 0)
+				count0++;
+			else if(armsPosition[m] == 1)
 				count1++;
-				if(count1 == anchor && armsPositionA[i-anchor] != 1){
-					time1 = time1 + delay*anchor;
-					visit1++;
-					ordem = ordem + ",1";
-					if(order1 == 0){
-						roiManager("Select", i-anchor);
-						order1 = delay * (getSliceNumber()-sStart);
-					}
-						
-				}
-				if(count1 > anchor)
-					time1 = time1 + delay;
-			
-			}else if(count1 > anchor && armsPositionA[i]!=1){
-				count1=0;
-			}else if(armsPositionA[i]==2){
+			else if(armsPosition[m] == 2)
 				count2++;
-				if(count2 == anchor && armsPositionA[i-anchor] != 2){
-					time2 = time2 + delay*anchor;
-					visit2++;
-					ordem = ordem + ",2";
-					if(order2 == 0){
-						roiManager("Select", i-anchor);
-						order2 = delay * (getSliceNumber()-sStart);
-					}
-						
-				}
-				if(count2 > anchor)
-					time2 = time2 + delay;
-			
-			}else if(count2 > anchor && armsPositionA[i]!=2){
-				count2=0;		
-			}else if(armsPositionA[i]==3){
+			else
 				count3++;
-				
-				
-				if(count3 == anchor && armsPositionA[i-anchor] != 3){
-					time3 = time3 + delay*anchor;
-					visit3++;
-					ordem = ordem + ",3";
-					if(order3 == 0){
-						roiManager("Select", i-anchor);
-						order3 = delay * (getSliceNumber()-sStart);
-					}
-						
-				}
-				if(count3 > anchor)
-					time3 = time3 + delay;
-					
-			}else if(count3 > anchor && armsPositionA[i]!=3){
-				count3=0;
-			}
+		}
+		
+		
+		if(count0 >= count1 && count0 >= count2 && count0 >= count3)
+			armsPositionA[j]=0;
+		else if(count1 > count0 && count1 > count2 && count1 > count3)
+			armsPositionA[j]=1;
+		else if(count2 > count0 && count2 > count1 && count2 > count3)
+			armsPositionA[j]=2;
+		else 
+			armsPositionA[j]=3;		
+		
+		
+		
+	}
 	
-		} 
+
+	
+	/*Positions in the arms*/
+	ordem = toString(armsPositionA[0]);
+	
+	
+	//Setup positions counts and visit times
+	count0 = 0; count1 = 0; count2=0; count3=0;
+	anchor1 = floor(fps/3);
+	if(armsPosition[0] == 1) 
+		visit1++;
+	else if(armsPosition[0] == 2)
+		visit2++;
+	else if(armsPosition[0] == 3)
+		visit3++;
+	
+	for(i = 1; i < armsPositionA.length; i++){
+		if(anchor1 > i){
+			anchor = i;
+		}else{
+			anchor = anchor1;
+		}
+		if(armsPositionA[i]==1){
+			count1++;
+			if(count1 == anchor && armsPositionA[i-anchor] != 1){
+				time1 = time1 + delay*anchor;
+				visit1++;
+				ordem = ordem + ",1";
+				if(order1 == 0){
+					roiManager("Select", i-anchor);
+					order1 = delay * (getSliceNumber()-sStart);
+				}
+					
+			}
+			if(count1 > anchor)
+				time1 = time1 + delay;
+		
+		}else if(count1 > anchor && armsPositionA[i]!=1){
+			count1=0;
+		}else if(armsPositionA[i]==2){
+			count2++;
+			if(count2 == anchor && armsPositionA[i-anchor] != 2){
+				time2 = time2 + delay*anchor;
+				visit2++;
+				ordem = ordem + ",2";
+				if(order2 == 0){
+					roiManager("Select", i-anchor);
+					order2 = delay * (getSliceNumber()-sStart);
+				}
+					
+			}
+			if(count2 > anchor)
+				time2 = time2 + delay;
+		
+		}else if(count2 > anchor && armsPositionA[i]!=2){
+			count2=0;		
+		}else if(armsPositionA[i]==3){
+			count3++;
+			
+			
+			if(count3 == anchor && armsPositionA[i-anchor] != 3){
+				time3 = time3 + delay*anchor;
+				visit3++;
+				ordem = ordem + ",3";
+				if(order3 == 0){
+					roiManager("Select", i-anchor);
+					order3 = delay * (getSliceNumber()-sStart);
+				}
+					
+			}
+			if(count3 > anchor)
+				time3 = time3 + delay;
+				
+		}else if(count3 > anchor && armsPositionA[i]!=3){
+			count3=0;
+		}
+
+	} 
 
 	
 
@@ -2658,7 +2670,7 @@ dimensions of the triangle*/
 		setResult("Y Center",i, arrayY[i]);
 		setResult("Displacement ("+units+")",i, displacement[i]);
 		setResult("Speed ("+units+"/s)",i, velocity[i]);
-		setResult("In Arm (1, 2, 3)",i, armsPosition[i]);
+		setResult("In Arm (1-Center, 2-Left, 3-Right)",i, armsPosition[i]);
 		
 	}
 	updateResults();
@@ -2671,31 +2683,31 @@ dimensions of the triangle*/
 	setResult("Label", i, "Total distance travelled ("+units+")"); 
 	setResult("Value", i, displa);
 	i = i + 1;
-	setResult("Label", i, "Number of entries in arm number 1"); 
+	setResult("Label", i, "Number of entries in center arm"); 
 	setResult("Value", i, visit1);
 	i = i + 1;
-	setResult("Label", i, "Number of entries in arm number 2"); 
+	setResult("Label", i, "Number of entries in left arm"); 
 	setResult("Value", i, visit2);
 	i = i + 1;
-	setResult("Label", i, "Number of entries in arm number 3"); 
+	setResult("Label", i, "Number of entries in right arm"); 
 	setResult("Value", i,  visit3);
 	i = i + 1;
-	setResult("Label", i, "Time spent in arm number 1"); 
+	setResult("Label", i, "Time spent in center arm"); 
 	setResult("Value", i, time1);
 	i = i + 1;
-	setResult("Label", i, "Time spent in arm number 2"); 
+	setResult("Label", i, "Time spent in left arm"); 
 	setResult("Value", i, time2);
 	i = i + 1;
-	setResult("Label", i, "Time spent in arm number 3"); 
+	setResult("Label", i, "Time spent in right arm"); 
 	setResult("Value", i, time3);
 	i = i + 1;
-	setResult("Label", i, "Time of first visit to arm number 1"); 
+	setResult("Label", i, "Time of first visit to center arm"); 
 	setResult("Value", i, order1);
 	i = i + 1;
-	setResult("Label", i, "Time of first visit to arm number 2"); 
+	setResult("Label", i, "Time of first visit to left arm"); 
 	setResult("Value", i, order2);
 	i = i + 1;
-	setResult("Label", i, "Time of first visit to arm number 3"); 
+	setResult("Label", i, "Time of first visit to right arm"); 
 	setResult("Value", i, order3);
 	/*i = i + 1;
 	setResult("Label", i, "Average displacement");
@@ -2727,81 +2739,77 @@ dimensions of the triangle*/
 
 
 /*Get individual parameters for the ROI of mice in OpenField*/
-//getDirectionTY(0, averDistance, xcenterTriangle, ycenterTriangle, armMiddleAnglesR, armOrder);
-function getDirectionTY(pposition, aveDistance, xcenter, ycenter, armAnglesR, armOrder){
+function getDirectionTY(pposition){
 
 		//Get the coordinates of the selection
 		getSelectionCoordinates(xp, yp);
 
-		armOne = 0; armTwo = 0; armThree = 0;
+		center = 0; left = 0; rigth = 0;
 
-		/*//Get central box parameters
+		//Get central box parameters
 		triangleX = getFileData(3, dir, imTitle, 5);
 		triangleY = getFileData(4, dir, imTitle, 5);
 
 		y = (triangleY[0] + triangleY[1])/2;
 		xl = triangleX[0] + (abs(triangleX[0] - triangleX[2])/2);
 		xr = triangleX[1] - (abs(triangleX[1] - triangleX[2])/2);
-		*/
+
+
 		
-			
 		for(i = 0; i < xp.length; i++){
 			//Check where the coordinates are
-			tempDist = calculateDistance(xcenter, ycenter, xp[i], yp[i]);
-			//toUnscaled(tempDist);
-			
-			if(tempDist >= aveDistance/2){
-				angler = calculateAngleTY(xcenter, ycenter, xp[i], yp[i]);
-				if(cos((armAnglesR[armOrder[0]]-angler)*PI/180) > cos(60*PI/180)){
-					armOne++;
-				}else if(cos((armAnglesR[armOrder[1]]-angler)*PI/180) > cos(60*PI/180)){
-					armTwo++;
-				}else if(cos((armAnglesR[armOrder[2]]-angler)*PI/180) > cos(60*PI/180)){
-					armThree++;
-				}
-			}	
+			if(yp[i] <= y && triangleY[0] < triangleY[2])
+				center++;
+			else if(yp[i] > y && triangleY[0] > triangleY[2])
+				center++;
+			else if(xp[i] <= xl)
+				left++;
+			else if(xp[i] > xr)
+				rigth++;
+			else ;
 		}
-	
 		
 		headArea = 1 - headTYFraction;
 		halfheadArea = headArea/2;
 		if(pposition==0){
-			if(armOne >= lengthOf(xp)*headArea)
+			if(center >= lengthOf(xp)*headArea)
 				angle = 1;
-			else if(armTwo >= lengthOf(xp)*headArea)
+			else if(left >= lengthOf(xp)*headArea)
 				angle = 2;
-			else if(armThree >= lengthOf(xp)*headArea)
+			else if(rigth >= lengthOf(xp)*headArea)
 				angle = 3;
 			else
 				angle = 0;	
 		}else if(pposition==1){
-			if(armOne >= lengthOf(xp)*halfheadArea)
+			if(center >= lengthOf(xp)*halfheadArea)
 				angle = 1;
-			else if(armTwo >= lengthOf(xp)*headArea)
+			else if(left >= lengthOf(xp)*headArea)
 				angle = 2;
-			else if(armThree >= lengthOf(xp)*headArea)
+			else if(rigth >= lengthOf(xp)*headArea)
 				angle = 3;
 			else
 				angle = 0;	
 		}else if(pposition==2){
-			if(armOne >= lengthOf(xp)*headArea)
+			if(center >= lengthOf(xp)*headArea)
 				angle = 1;
-			else if(armTwo >= lengthOf(xp)*halfheadArea)
+			else if(left >= lengthOf(xp)*halfheadArea)
 				angle = 2;
-			else if(armThree >= lengthOf(xp)*headArea)
+			else if(rigth >= lengthOf(xp)*headArea)
 				angle = 3;
 			else
 				angle = 0;	
 		}else if(pposition==3){
-			if(armOne >= lengthOf(xp)*headArea)
+			if(center >= lengthOf(xp)*headArea)
 				angle = 1;
-			else if(armTwo >= lengthOf(xp)*headArea)
+			else if(left >= lengthOf(xp)*headArea)
 				angle = 2;
-			else if(armThree >= lengthOf(xp)*halfheadArea)
+			else if(rigth >= lengthOf(xp)*halfheadArea)
 				angle = 3;
 			else
 				angle = 0;	
 		}
+		
+
 		
 		return angle;
 	 
@@ -3076,6 +3084,30 @@ function GPreferences(){
 		call("ij.Prefs.set", "MouBeAT_Prefs.gen.units", unitsL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.gen.gauval", gauValL);
 		call("ij.Prefs.set", "MouBeAT_Prefs.gen.dispVal", dispValL);
+		//Cube maze
+		//call("ij.Prefs.set", "MouBeAT_Prefs.cube.soli", solidityL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.width", wCubeL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.marea", mCubeAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.cube.headFraction", headCubeFractionL);
+		//Elevated maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.width", wElevatedL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.length", lElevatedL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.marea", mElevatedAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.smooth", sElevatedL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", headElevatedFractionL);
+		//Swimming maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.swim.dia", dSwimmingL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.swim.marea", mSwimmingAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.swim.poolWD", poolWDL);
+		//T/Y maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.width", wTYL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.marea", mTYAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.ty.smooth", sTYL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.elev.headFraction", headTYFractionL);
+		//Freeze maze
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.marea", mFreezeAreaL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.smooth", sFreezeL);
+		call("ij.Prefs.set", "MouBeAT_Prefs.fre.binInt", tFreezeL);
 		
 	}else{
 		//General
@@ -3627,14 +3659,15 @@ function lineTrack(imageID, dir, imTitle, option){
 	        lineTo(arrayx[0], arrayy[0]);
 	        
 	        if(option == 5){
-				setLineWidth(2);
-				setColor("white");
-				//arrayx = getFileData(3, dir, imTitle, option);
-				//arrayy = getFileData(4, dir, imTitle, option);
-				drawString("Maize arms are numbered from 1 to 3 counterclockwise", 10,20);
-				drawString("with arm number 1 the closest to angle 0 ", 10,30);
-				drawString("with x axis the line that passes the center of the maize.", 10,40);
-        	}
+	        	setLineWidth(2);
+	        	setColor("white");
+	        	arrayx = getFileData(3, dir, imTitle, option);
+				arrayy = getFileData(4, dir, imTitle, option);
+				drawString("Center", arrayx[0] - 40, arrayy[0]-abs(arrayy[2]-arrayy[1])*2);
+				drawString("Left", arrayx[0]- 40, arrayy[0] + (abs(arrayy[2]-arrayy[1])*2));
+				drawString("Rigth", arrayx[1], arrayy[1] + (abs(arrayy[2]-arrayy[1])*2));
+				
+	        }
 		}
 		
 	}
@@ -3814,11 +3847,11 @@ function heatMap(imageID, dir, imTitle, option){
            	if(option == 5){
 				setLineWidth(2);
 				setColor("white");
-				//arrayx = getFileData(3, dir, imTitle, option);
-				//arrayy = getFileData(4, dir, imTitle, option);
-				drawString("Maize arms are numbered from 1 to 3 counterclockwise", 10,20);
-				drawString("with arm number 1 the closest to angle 0 ", 10,30);
-				drawString("with x axis the line that passes the center of the maize.", 10,40);
+				arrayx = getFileData(3, dir, imTitle, option);
+				arrayy = getFileData(4, dir, imTitle, option);
+				drawString("Center", arrayx[0] - 40, arrayy[0]-abs(arrayy[2]-arrayy[1])*2);
+				drawString("Left", arrayx[0]- 40, arrayy[0] + (abs(arrayy[2]-arrayy[1])*2));
+				drawString("Rigth", arrayx[1], arrayy[1] + (abs(arrayy[2]-arrayy[1])*2));
         	}
 		}
 	}
@@ -4038,23 +4071,6 @@ function darkRPorjection(imTitle, min, max) {
 }
 
 /*function to calculate the angle between two points (using atan2)*/
-function calculateAngleTY(x1,y1, x2,y2){
-	xdi = x2 - x1;
-	ydi = y2 - y1;
-	
-	//uses atan2 to get negative values for different quadrants
-	angle = atan2(ydi, xdi)*(180/PI);
-	if(angle < 0){
-		angle = abs(angle);
-	}else if(angle > 0){
-		angle = abs(angle-360);
-	}
-
-	return angle;
-}
-
-/* Angle function for TY maize*/
-/*function to calculate the angle between two points (using atan2)*/
 function calculateAngle(x1,y1, x2,y2){
 	xdi = x2 - x1;
 	ydi = y2 - y1;
@@ -4064,24 +4080,9 @@ function calculateAngle(x1,y1, x2,y2){
 	if(angle < 0){
 		angle += 360;
 	}
-
+	
 	return angle;
 }
-
-/*function to calculate the angle between two points (using atan2)*/
-function calculateAngleR(x1,y1, x2,y2){
-	xdi = x2 - x1;
-	ydi = y2 - y1;
-	
-	//uses atan2 to get negative values for different quadrants
-	angle = atan2(ydi, xdi)*(180/PI);
-	if(angle < 0){
-		angle += 360;
-	}
-	
-	return (angle* PI/180);
-}
-
 
 
 
