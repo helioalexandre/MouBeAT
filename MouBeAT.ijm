@@ -231,7 +231,7 @@ function ProcessVideo(){
 	}
 	File.delete(str);
 	//If original FPS not set get it from here
-	originalFPS= 0;
+	//originalFPS= 0;
 	if(originalFPS == 0 || isNaN(durationM)){
 		//get options to reducie movie size
 		print(filestring);
@@ -458,7 +458,8 @@ function ProcessVideo(){
 		setBatchMode("show");
 	}
 	
-	//Save tiff stack	
+	
+//Save tiff stack	
 	setMetadata("Info", "Frame rate: " + fpsNN);
 	saveAs("tiff", dir+name +".converted.tif");
 	
