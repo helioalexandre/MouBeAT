@@ -231,10 +231,28 @@ function ProcessVideo(){
 	}
 	File.delete(str);
 	//If original FPS not set get it from here
-	if(originalFPS == 0){
+	originalFPS= 0;
+	if(originalFPS == 0 || isNaN(durationM)){
+		//get options to reducie movie size
 		print(filestring);
-		waitForUser("FPS not set...", "Please look into the log file open and locate the fps count to insert it in the next dialog.");
-		getNumber("Ok please insert the FPS value here", 24);
+		Dialog.create("I'm lacking values");
+		if(originalFPS == 0)
+			Dialog.addNumber("Please insert the FPS count", 24);
+		if(isNaN(durationM)){
+			Dialog.addNumber("Please insert the number of hours of the movie", 0);
+			Dialog.addNumber("Please insert the number of minutes of the movie", 5);
+			Dialog.addNumber("Please insert the number of second of the movie (round to miliseconds to the closest second", 30);
+		}
+		Dialog.show();
+		if(originalFPS == 0)
+			originalFPS = Dialog.getNumber();
+		
+		if(isNaN(durationM)){
+			durationH = Dialog.getNumber();
+			durationM = Dialog.getNumber();
+			durationS = Dialog.getNumber();
+		}
+		
 		selectWindow("Log");
          run("Close" );
 	}
