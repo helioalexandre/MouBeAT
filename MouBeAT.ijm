@@ -180,7 +180,7 @@ function ProcessVideo(){
 	}
 
 	//run ffmpeg to get data from movie file
-	stringGetMetaData = pathFFmpeg + " -hide_banner -i "+ path +" -map 0:v:0 -c copy -f null - 2> "+ str;
+	stringGetMetaData = pathFFmpeg + " -hide_banner -i "+ path +" -map 0:v:0 -c copy -f null - 2>"+ str;
 	if(startsWith(os, "Windows")){
 		exec("cmd /c "+ stringGetMetaData);	
 	}
@@ -192,7 +192,6 @@ function ProcessVideo(){
 	//get from the txt info file the duration and number of frames of the movie
 	//after delete the file
 	filestring = File.openAsString(str);
-	//print(filestring);
 	rows = split(filestring, "\n");
 	streamFlag = true;
 	originalFPS = 0;
@@ -229,7 +228,7 @@ function ProcessVideo(){
 		}
 		
 	}
-	File.delete(str);
+	//File.delete(str);
 	//If original FPS not set get it from here
 	//originalFPS= 0;
 	if(originalFPS == 0 || isNaN(durationM)){
@@ -264,29 +263,27 @@ function ProcessVideo(){
 		frameCount += (durationH * 3600)*originalFPS;
 	}
 	
-
-	
-
 	//get a tif sample to determine final size of converted tiff stack
 	strTiff= path + ".temp_output.tiff";
 	if(File.exists(strTiff)){
 		File.delete(strTiff);
 	}
-
+	
 	if(durationM == 0){
 		ss = "00:00:"+IJ.pad(round(durationS/2),2);
 	} else
 		ss = "00:"+IJ.pad(round(durationM/2),2)+":00";
 	
-	stringGetframe = pathFFmpeg + " -ss "+ss+" -i "+ path + " -pix_fmt gray -compression_algo lzw "+ strTiff;
-
+	stringGetframe = pathFFmpeg + " -ss "+ss+" -i "+ path + " -frames:v 1 -pix_fmt gray -compression_algo lzw "+ strTiff;
+	
 	if(startsWith(os, "Windows")){
-		exec("cmd /c "+ stringGetframe);	
+		exec("cmd /c "+ stringGetframe);
+		
 	}
 	else{
 		exec("sh -c "+ stringGetframe);
 	}
-
+	
 	setBatchMode("true");
 	open(strTiff);
 	h = getHeight();
@@ -333,19 +330,19 @@ function ProcessVideo(){
 	trimEnd = Dialog.getString();
 
 	//prossess scale down on movie
-	if(flagScale){
-		strTiff1024 = path + ".temp_output_1024.tiff";
-		strTiff512 = path + ".temp_output_512.tiff";
+	strTiff1024 = path + ".temp_output_1024.tiff";
+	strTiff512 = path + ".temp_output_512.tiff";
 		
-		//Delete output files of scale down tiff if they exist
-		if(File.exists(strTiff1024)){
-			File.delete(strTiff1024);
-		}
+	//Delete output files of scale down tiff if they exist
+	if(File.exists(strTiff1024)){
+		File.delete(strTiff1024);
+	}
 
-		if(File.exists(strTiff512)){
-			File.delete(strTiff512);
-		}
-
+	if(File.exists(strTiff512)){
+		File.delete(strTiff512);
+	}
+		
+	if(flagScale){
 		//Run ffmepg to get 2 tifs of 1024 and 512 scales from the middle of the movie
 		stringGetframe1024 = pathFFmpeg + " -ss "+ss+" -i "+ path + " -vf scale=1024:ih*1024/iw -pix_fmt gray -compression_algo lzw "+ strTiff1024;
 		stringGetframe512 = pathFFmpeg + " -ss "+ss+" -i "+ path + " -vf scale=512:ih*512/iw -pix_fmt gray -compression_algo lzw "+ strTiff512;
@@ -399,12 +396,21 @@ function ProcessVideo(){
 		stringScale = stringScale + " -vf crop="+w+":"+h+":"+x+":"+y;
 	}
 
-	File.delete(strTiff1024);
-	File.delete(strTiff512);
-	File.delete(strTiff);
+	//Delete output files of scale down tiff if they exist
+	if(File.exists(strTiff1024)){
+		File.delete(strTiff1024);
+	}
+
+	if(File.exists(strTiff512)){
+		File.delete(strTiff512);
+	}
+	
 	if(flagTrim){
 		stringTrimS = "-ss 00:" + trimStart;
 		stringTrimE = " -to 00:" + trimEnd;
+	}else{
+		stringTrimS = "";
+		stringTrimE = "";
 	}
 		
 
@@ -458,9 +464,8 @@ function ProcessVideo(){
 		setBatchMode("show");
 	}
 	
-	
-//Save tiff stack	
-	setMetadata("Info", "Frame rate: " + fpsNN);
+	//Save tiff stack	
+	setMetadata("Info", "Frame rate: " + fpsNN + " fps");
 	saveAs("tiff", dir+name +".converted.tif");
 	
 	
